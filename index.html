@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DropScan — Détecteur de Dropshipping</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #13131a; --surface2: #1c1c28;
+      --border: #1a1a26; --border2: #2a2a3a;
+      --red: rgb(239,68,68); --red-bg: rgba(239,68,68,.13); --red-border: rgba(239,68,68,.3);
+      --green: #30d158; --orange: #f97316;
+      --text: #f0f0ec; --muted: #555; --muted2: #888;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes dsfade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .dsfade { animation: dsfade .3s ease; }
+
+    #ds-header { display: flex; align-items: center; justify-content: space-between; padding: 15px 22px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+    .powered { font-size: 10px; color: var(--muted); }
+
+    #body-wrap { flex: 1; display: flex; overflow: hidden; }
+    #main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 32px 20px 24px; overflow-y: auto; }
+
+    .phase { display: none; width: 100%; }
+    .phase.active { display: flex; flex-direction: column; align-items: center; }
+    .ds-content { width: 100%; max-width: min(500px, 90vw); }
+
+    .hero { text-align: center; margin-bottom: 24px; }
+    .eyebrow { font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
+    .hero h1 { font-size: clamp(18px, 4.5vw, 24px); font-weight: 500; letter-spacing: -.03em; line-height: 1.2; margin-bottom: 8px; }
+    .hero p { font-size: 12px; color: var(--muted); }
+
+    #err-box { background: rgba(239,68,68,.1); border: 0.5px solid var(--red-border); border-radius: 8px; padding: 9px 13px; font-size: 12px; color: var(--red); margin-bottom: 12px; display: none; }
+
+    .ds-tabs { display: flex; gap: 3px; background: #0f0f18; border-radius: 9px; padding: 3px; margin-bottom: 12px; }
+    .ds-tab { flex: 1; padding: 7px; border: none; background: none; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .15s; }
+    .ds-tab.active { background: var(--surface); color: var(--text); border: 0.5px solid var(--border2); }
+
+    .input-panel { background: var(--surface); border: 0.5px solid var(--border2); border-radius: 12px; padding: 14px; }
+    .ds-row { display: flex; gap: 8px; }
+    .ds-url-input { flex: 1; font-size: 13px; padding: 0 11px; height: 36px; border-radius: 8px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); outline: none; transition: border-color .15s; }
+    .ds-url-input:focus { border-color: var(--red-border); }
+    .hint { font-size: 11px; color: var(--muted); margin-top: 8px; }
+    .btn-red { height: 36px; padding: 0 15px; background: var(--red-bg); color: var(--red); border: 0.5px solid var(--red-border); border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+    .btn-red:hover { opacity: .8; }
+    .btn-red:disabled { opacity: .38; cursor: not-allowed; }
+    .btn-full { width: 100%; margin-top: 8px; }
+
+    .drop-zone { border: 1.5px dashed var(--border2); border-radius: 10px; padding: 22px 16px; text-align: center; cursor: pointer; transition: border-color .15s; }
+    .drop-zone:hover { border-color: var(--red); }
+    .drop-icon { font-size: 20px; margin-bottom: 6px; }
+    .drop-lbl { font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+    .drop-sub { font-size: 11px; color: var(--muted); }
+    .paste-zone { border: 1.5px dashed var(--border2); border-radius: 10px; padding: 14px 16px; text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    #img-input-wrap { display: flex; flex-direction: column; gap: 8px; }
+    #img-preview { display: none; position: relative; }
+    #img-preview img { width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    #clear-img { position: absolute; top: 5px; right: 5px; background: rgba(10,10,15,.85); border: 0.5px solid var(--border2); color: #aaa; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    #phase-scanning { text-align: center; padding-top: 52px; }
+    .spinner { width: 38px; height: 38px; border: 2.5px solid var(--surface2); border-top-color: var(--red); border-radius: 50%; animation: spin .85s linear infinite; margin: 0 auto 18px; }
+    #scanning-steps { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 240px; margin-left: auto; margin-right: auto; }
+    .s-step { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .s-step.done { color: var(--green); }
+    .s-step.active { color: var(--text); }
+    .s-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .s-step.done .s-dot { background: var(--green); }
+    .s-step.active .s-dot { background: var(--red); }
+
+    #phase-result { gap: 20px; }
+    #score-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    #score-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+    #product-info { text-align: center; }
+    #product-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    #product-summary { font-size: 12px; color: #666; line-height: 1.6; max-width: 340px; }
+    .sec-lbl { font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    #sources-wrap, #signals-wrap { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .source-link { display: flex; align-items: center; gap: 10px; padding: 10px 13px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 9px; text-decoration: none; color: var(--text); transition: border-color .15s; }
+    .source-link:hover { border-color: var(--red-border); }
+    .src-icon { font-size: 16px; }
+    .src-info { flex: 1; }
+    .src-name { font-size: 12px; font-weight: 600; }
+    .src-desc { font-size: 11px; color: #666; }
+    .src-arrow { color: var(--muted); font-size: 13px; }
+    .signal-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 9px; font-size: 12px; }
+    .sig-icon { flex-shrink: 0; }
+    .sig-title { font-weight: 500; color: #d0d0d8; margin-right: 4px; }
+    .sig-detail { color: #666; }
+    #reset-btn { width: 100%; background: none; border: 0.5px solid var(--border); border-radius: 9px; color: var(--muted); font-size: 12px; padding: 10px; cursor: pointer; transition: all .15s; }
+    #reset-btn:hover { border-color: #333; color: #aaa; }
+
+    #sidebar { width: 230px; flex-shrink: 0; border-left: 0.5px solid var(--border); display: none; flex-direction: column; overflow-y: auto; }
+    #sidebar.visible { display: flex; }
+    .sidebar-header { padding: 15px 14px 10px; border-bottom: 0.5px solid var(--border); font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: #444; flex-shrink: 0; }
+    #history-list { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+    .history-empty { padding: 24px 16px; text-align: center; }
+    .history-empty .h-icon { font-size: 22px; margin-bottom: 8px; }
+    .history-empty span { font-size: 11px; color: #444; }
+    .history-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 9px; cursor: pointer; text-align: left; width: 100%; transition: border-color .15s; }
+    .history-item:hover { border-color: var(--border2); }
+    .h-info { flex: 1; min-width: 0; }
+    .h-name { font-size: 12px; font-weight: 500; color: #c0c0c8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .h-time { font-size: 10px; color: #444; margin-top: 2px; }
+    .h-score { font-size: 11px; font-weight: 600; flex-shrink: 0; }
+    footer { text-align: center; font-size: 10px; color: #2a2a3a; padding: 8px 0 14px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<header id="ds-header">
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <rect width="26" height="26" rx="6" fill="rgba(239,68,68,0.14)"/>
+      <circle cx="13" cy="13" r="7.5" stroke="rgb(239,68,68)" stroke-width="1.2" fill="none"/>
+      <line x1="13" y1="3.5" x2="13" y2="2" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="13" y1="24" x2="13" y2="22.5" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="3.5" y1="13" x2="2" y2="13" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="24" y1="13" x2="22.5" y2="13" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <polyline points="9.5,13 12.5,16 17.5,10.5" stroke="rgb(239,68,68)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    DropScan
+  </div>
+  <div class="powered">IA via pollinations.ai · gratuit</div>
+</header>
+
+<div id="body-wrap">
+  <main id="main-content">
+
+    <!-- IDLE -->
+    <div id="phase-idle" class="phase active dsfade">
+      <div class="ds-content">
+        <div class="hero">
+          <div class="eyebrow">Détecteur de dropshipping</div>
+          <h1>Ce produit vient-il<br>d'AliExpress ?</h1>
+          <p>Lien ou image → verdict instantané · fonctionne depuis n'importe quel navigateur</p>
+        </div>
+        <div id="err-box"></div>
+        <div class="ds-tabs">
+          <button class="ds-tab active" onclick="switchTab('url')">🔗 Lien</button>
+          <button class="ds-tab" onclick="switchTab('img')">🖼️ Image</button>
+        </div>
+        <div id="tab-url" class="input-panel">
+          <div class="ds-row">
+            <input class="ds-url-input" type="url" id="url-input" placeholder="https://boutique.com/produit…" />
+            <button class="btn-red" onclick="goUrl()">Scanner</button>
+          </div>
+          <p class="hint">Shopify, TikTok Shop, Amazon, Instagram…</p>
+        </div>
+        <div id="tab-img" class="input-panel" style="display:none;flex-direction:column;gap:8px;">
+          <div class="paste-zone" id="paste-hint">📋 Coller une image (Ctrl+V)</div>
+          <div id="img-input-wrap">
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+              <input type="file" id="file-input" accept="image/*" style="display:none" />
+              <div class="drop-icon">📁</div>
+              <div class="drop-lbl">Déposez ou cliquez</div>
+              <div class="drop-sub">JPG, PNG, WEBP</div>
+            </div>
+            <div id="img-preview">
+              <img id="preview-img" src="" alt="Aperçu" />
+              <button id="clear-img" onclick="clearImg()">✕</button>
+            </div>
+          </div>
+          <button class="btn-red btn-full" id="analyze-img-btn" onclick="goImg()" disabled>⚡ Analyser l'image</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCANNING -->
+    <div id="phase-scanning" class="phase">
+      <div class="spinner"></div>
+      <div style="font-size:12px;color:var(--muted)">Analyse en cours…</div>
+      <div id="scanning-steps">
+        <div class="s-step" id="st0"><div class="s-dot"></div>Identification du produit</div>
+        <div class="s-step" id="st1"><div class="s-dot"></div>Recherche sur AliExpress / Temu</div>
+        <div class="s-step" id="st2"><div class="s-dot"></div>Comparaison prix & images</div>
+        <div class="s-step" id="st3"><div class="s-dot"></div>Génération du verdict</div>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="phase-result" class="phase dsfade">
+      <div class="ds-content" style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+        <div id="score-ring-wrap">
+          <svg width="176" height="176" viewBox="0 0 176 176">
+            <circle cx="88" cy="88" r="78" fill="none" stroke="#1a1a24" stroke-width="4"/>
+            <circle id="score-progress" cx="88" cy="88" r="78" fill="none"
+              stroke="#ef4444" stroke-width="4"
+              stroke-dasharray="490.09" stroke-dashoffset="490.09"
+              stroke-linecap="round" transform="rotate(-90 88 88)"/>
+            <text id="score-number" x="88" y="82" text-anchor="middle" fill="#f0f0ec" font-size="36" font-weight="500" font-family="Inter,system-ui,sans-serif">0</text>
+            <text x="88" y="100" text-anchor="middle" fill="#555" font-size="12" font-family="Inter,system-ui,sans-serif">%</text>
+          </svg>
+          <div id="score-label">—</div>
+        </div>
+        <div id="product-info">
+          <div id="product-name"></div>
+          <div id="product-summary"></div>
+        </div>
+        <div id="sources-section" style="width:100%;display:none">
+          <div class="sec-lbl">Source probable</div>
+          <div id="sources-wrap"></div>
+        </div>
+        <div id="signals-section" style="width:100%;display:none">
+          <div id="signals-wrap"></div>
+        </div>
+        <button id="reset-btn" onclick="reset()">↩ Analyser un autre produit</button>
+      </div>
+    </div>
+
+  </main>
+
+  <aside id="sidebar">
+    <div class="sidebar-header">Analyses récentes</div>
+    <div id="history-list">
+      <div class="history-empty"><div class="h-icon">🕓</div><span>Aucune analyse</span></div>
+    </div>
+  </aside>
+</div>
+
+<footer>© 2025 DropScan — Résultats indicatifs · IA via <a href="https://pollinations.ai" target="_blank" style="color:inherit">pollinations.ai</a> (gratuit, sans clé)</footer>
+
+<script>
+// ── Prompt système ──
+const SYSTEM_PROMPT = `Tu es un expert en détection de dropshipping. Analyse le produit fourni. RÉPONDS UNIQUEMENT EN JSON VALIDE, sans backticks, sans markdown, sans texte avant ou après :
+{"productName":"Nom précis","dropshippingScore":87,"summary":"1 phrase.","signals":[{"icon":"⚠️","title":"Titre","detail":"Explication"}],"sources":[{"platform":"AliExpress","icon":"🛒","description":"~X€","searchUrl":"https://www.aliexpress.com/wholesale?SearchText=mots+cles"}]}
+dropshippingScore = 0 à 100. 0-30 légitime, 31-69 suspect, 70-100 dropshipping.
+Indices : photos fond blanc génériques, présence AliExpress/Temu/DHgate, marques inconnues, prix gonflés, gadgets viraux, emballages sans identité.
+Si score < 30 : signals = raisons de légitimité, sources = [].`;
+
+// ── Modèles Pollinations (cascade) ──
+// GET https://text.pollinations.ai/{prompt}?model=X&system=Y&json=true
+// CORS ouvert, fonctionne depuis file:// et tout navigateur, sans clé API
+const MODELS = ['openai', 'mistral', 'deepseek'];
+
+let imgB64 = null, imgMime = null, analysisHistory = [];
+let scanTimer = null;
+
+// ── Appel API Pollinations (GET, sans clé) ──
+async function callPollinations(userPrompt, model) {
+  const url = 'https://text.pollinations.ai/' +
+    encodeURIComponent(userPrompt) +
+    '?model=' + model +
+    '&system=' + encodeURIComponent(SYSTEM_PROMPT) +
+    '&json=true' +
+    '&seed=' + Math.floor(Math.random() * 9999);
+
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const text = await r.text();
+  if (!text || text.trim() === '') throw new Error('Réponse vide');
+  return text;
+}
+
+// ── Steps animation ──
+function startSteps() {
+  const steps = ['st0','st1','st2','st3'];
+  let i = 0;
+  steps.forEach(id => { const el = document.getElementById(id); el.className = 's-step'; });
+  function tick() {
+    if (i > 0) { const prev = document.getElementById(steps[i-1]); prev.classList.remove('active'); prev.classList.add('done'); }
+    if (i < steps.length) { document.getElementById(steps[i]).classList.add('active'); i++; scanTimer = setTimeout(tick, 900 + Math.random()*400); }
+  }
+  tick();
+}
+function stopSteps() {
+  clearTimeout(scanTimer);
+  ['st0','st1','st2','st3'].forEach(id => { document.getElementById(id).classList.remove('active'); document.getElementById(id).classList.add('done'); });
+}
+
+// ── Tabs ──
+function switchTab(t) {
+  document.querySelectorAll('.ds-tab').forEach((b,i) => b.classList.toggle('active', (t==='url'&&i===0)||(t==='img'&&i===1)));
+  document.getElementById('tab-url').style.display = t==='url' ? 'block' : 'none';
+  document.getElementById('tab-img').style.display = t==='img' ? 'flex' : 'none';
+  hideErr();
+}
+
+// ── Phase ──
+function showPhase(p) {
+  ['idle','scanning','result'].forEach(id => document.getElementById('phase-'+id).classList.remove('active'));
+  document.getElementById('phase-'+p).classList.add('active');
+}
+
+// ── Errors ──
+function showErr(msg) { const e = document.getElementById('err-box'); e.textContent = '⚠️ ' + msg; e.style.display = 'block'; }
+function hideErr() { document.getElementById('err-box').style.display = 'none'; }
+
+// ── Image ──
+document.getElementById('file-input').addEventListener('change', function() { handleFile(this.files[0]); });
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const parts = ev.target.result.split(',');
+    imgB64 = parts[1]; imgMime = file.type || 'image/jpeg';
+    document.getElementById('preview-img').src = ev.target.result;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('drop-zone').style.display = 'none';
+    document.getElementById('analyze-img-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+function clearImg() {
+  imgB64 = null; imgMime = null;
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('drop-zone').style.display = 'block';
+  document.getElementById('analyze-img-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+}
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--red)'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor = ''; handleFile(e.dataTransfer.files[0]); });
+
+window.addEventListener('paste', e => {
+  for (const item of (e.clipboardData?.items || [])) {
+    if (item.type.startsWith('image/')) { switchTab('img'); handleFile(item.getAsFile()); break; }
+  }
+});
+const ph = document.getElementById('paste-hint');
+ph.addEventListener('mouseenter', () => ph.innerHTML = 'Copiez puis <kbd style="background:#1c1c28;border:0.5px solid #333;border-radius:4px;padding:1px 5px;font-size:11px">Ctrl+V</kbd> / <kbd style="background:#1c1c28;border:0.5px solid #333;border-radius:4px;padding:1px 5px;font-size:11px">⌘+V</kbd>');
+ph.addEventListener('mouseleave', () => ph.textContent = '📋 Coller une image (Ctrl+V)');
+
+document.getElementById('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') goUrl(); });
+
+// ── Go URL ──
+function goUrl() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) { showErr('Entrez un lien produit.'); return; }
+  hideErr();
+  const prompt = "Analyse ce produit e-commerce : " + url + ". Génère des URLs de recherche AliExpress/Temu si c'est du dropshipping.";
+  runAnalysis(prompt);
+}
+
+// ── Go Image ──
+function goImg() {
+  if (!imgB64) { showErr('Sélectionnez ou collez une image.'); return; }
+  hideErr();
+  // Pour l'image, on décrit la démarche (Pollinations text ne supporte pas vision en GET simple)
+  // On envoie l'URL data en paramètre image si le modèle le supporte, sinon on analyse à partir de la description demandée
+  const prompt = "Identifie ce produit à partir de son image encodée en base64 (data:" + imgMime + ";base64, premiers 100 chars: " + imgB64.substring(0,100) + "...) et détermine s'il est vendu en dropshipping. Génère des URLs de recherche AliExpress/Temu.";
+  runAnalysis(prompt);
+}
+
+// ── Analyse avec cascade de modèles ──
+async function runAnalysis(userPrompt) {
+  showPhase('scanning');
+  startSteps();
+  let lastErr = '';
+
+  for (const model of MODELS) {
+    try {
+      const raw = await callPollinations(userPrompt, model);
+      // Extraire le JSON même si du texte l'entoure
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Pas de JSON dans la réponse');
+      const parsed = JSON.parse(match[0]);
+      if (typeof parsed.dropshippingScore === 'undefined') throw new Error('JSON incomplet');
+
+      stopSteps();
+      await new Promise(r => setTimeout(r, 300));
+      showResult(parsed);
+      addToHistory(parsed);
+      return;
+    } catch(e) {
+      lastErr = e.message || String(e);
+      console.warn('Modèle', model, 'échoué:', lastErr);
+    }
+  }
+
+  stopSteps();
+  showPhase('idle');
+  showErr("Analyse impossible : " + lastErr + " — Vérifiez votre connexion et réessayez.");
+}
+
+// ── Affichage du résultat ──
+function showResult(r) {
+  const score = r.dropshippingScore ?? 0;
+  const color = score < 31 ? '#30d158' : score < 70 ? '#f97316' : '#ef4444';
+  const label = score < 31 ? 'Légitime' : score < 70 ? 'Suspect' : 'Dropshipping';
+  document.getElementById('product-name').textContent = r.productName || '';
+  document.getElementById('product-summary').textContent = r.summary || '';
+  document.getElementById('score-label').textContent = label;
+  document.getElementById('score-label').style.color = color;
+  animateRing(score, color);
+
+  const srcWrap = document.getElementById('sources-wrap');
+  const srcSec = document.getElementById('sources-section');
+  srcWrap.innerHTML = '';
+  if (r.sources?.length) {
+    srcSec.style.display = 'block';
+    r.sources.forEach(src => {
+      const a = document.createElement('a');
+      a.href = src.searchUrl || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'source-link';
+      a.innerHTML = '<span class="src-icon">' + (src.icon||'🛒') + '</span><div class="src-info"><div class="src-name">' + src.platform + '</div><div class="src-desc">' + src.description + '</div></div><span class="src-arrow">↗</span>';
+      srcWrap.appendChild(a);
+    });
+  } else srcSec.style.display = 'none';
+
+  const sigWrap = document.getElementById('signals-wrap');
+  const sigSec = document.getElementById('signals-section');
+  sigWrap.innerHTML = '';
+  if (r.signals?.length) {
+    sigSec.style.display = 'block';
+    r.signals.forEach(sig => {
+      const d = document.createElement('div'); d.className = 'signal-row';
+      d.innerHTML = '<span class="sig-icon">' + (sig.icon||'•') + '</span><span class="sig-title">' + sig.title + ' —</span><span class="sig-detail">' + sig.detail + '</span>';
+      sigWrap.appendChild(d);
+    });
+  } else sigSec.style.display = 'none';
+
+  showPhase('result');
+}
+
+// ── Animation ring ──
+function animateRing(score, color) {
+  const circ = 2 * Math.PI * 78;
+  const prog = document.getElementById('score-progress');
+  const num = document.getElementById('score-number');
+  prog.style.stroke = color;
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const p = Math.min((ts - start) / 1100, 1);
+    const cur = Math.round(score * (1 - Math.pow(1 - p, 3)));
+    num.textContent = cur;
+    prog.setAttribute('stroke-dashoffset', circ - (cur / 100) * circ);
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Mini ring (historique) ──
+function miniRingSVG(score) {
+  const R = 14, circ = 2 * Math.PI * R;
+  const offset = circ - (score / 100) * circ;
+  const color = score < 31 ? '#30d158' : score < 70 ? '#f97316' : '#ef4444';
+  return '<svg width="36" height="36" viewBox="0 0 36 36" style="flex-shrink:0"><circle cx="18" cy="18" r="' + R + '" fill="none" stroke="#1a1a24" stroke-width="2.5"/><circle cx="18" cy="18" r="' + R + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="' + offset.toFixed(2) + '" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="22" text-anchor="middle" fill="' + color + '" font-size="9" font-weight="600" font-family="Inter,system-ui,sans-serif">' + score + '</text></svg>';
+}
+
+// ── Historique ──
+function addToHistory(result) {
+  const time = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  analysisHistory.unshift({ productName: result.productName, score: result.dropshippingScore, time, result });
+  if (analysisHistory.length > 20) analysisHistory.pop();
+  renderHistory();
+}
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!analysisHistory.length) { list.innerHTML = '<div class="history-empty"><div class="h-icon">🕓</div><span>Aucune analyse</span></div>'; return; }
+  list.innerHTML = '';
+  analysisHistory.forEach(item => {
+    const color = item.score < 31 ? '#30d158' : item.score < 70 ? '#f97316' : '#ef4444';
+    const btn = document.createElement('button');
+    btn.className = 'history-item';
+    btn.innerHTML = miniRingSVG(item.score) + '<div class="h-info"><div class="h-name">' + item.productName + '</div><div class="h-time">' + item.time + '</div></div><div class="h-score" style="color:' + color + '">' + item.score + '%</div>';
+    btn.addEventListener('click', () => showResult(item.result));
+    list.appendChild(btn);
+  });
+}
+
+// ── Reset ──
+function reset() {
+  showPhase('idle');
+  document.getElementById('url-input').value = '';
+  clearImg(); hideErr(); switchTab('url');
+}
+
+// ── Sidebar responsive ──
+function checkWidth() { document.getElementById('sidebar').classList.toggle('visible', window.innerWidth >= 860); }
+window.addEventListener('resize', checkWidth);
+checkWidth();
+</script>
+</body>
+</html>
