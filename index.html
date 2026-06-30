@@ -1,1301 +1,869 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Suivi d'abonnements - Gère tous tes abonnements en un seul endroit">
-<title>Suivi d'abonnements</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap');
-  @font-face {
-    font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
-    font-weight: 400; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');
-    font-weight: 500; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');
-    font-weight: 600; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Bold.woff2') format('woff2');
-    font-weight: 700; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-ExtraBold.woff2') format('woff2');
-    font-weight: 800; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: 'Geist Mono';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');
-    font-weight: 400; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: 'Geist Mono';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Medium.woff2') format('woff2');
-    font-weight: 500; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: 'Geist Mono';
-    src: url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-SemiBold.woff2') format('woff2');
-    font-weight: 600; font-style: normal; font-display: swap;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DropScan — Détecteur de Dropshipping</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #13131a; --surface2: #1c1c28;
+      --border: #1a1a26; --border2: #2a2a3a;
+      --red: rgb(239,68,68); --red-bg: rgba(239,68,68,.13); --red-border: rgba(239,68,68,.3);
+      --green: #30d158; --orange: #f97316;
+      --text: #f0f0ec; --muted: #555; --muted2: #888;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes dsfade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .dsfade { animation: dsfade .3s ease; }
 
-  :root{
-    --bg:#f5ead8;
-    --bg-2:#ede0c8;
-    --card:#fdf6ec;
-    --card-hover:#f9f0e2;
-    --border:#ddd0b8;
-    --border-strong:#c9b99a;
-    --text:#1a1512;
-    --text-dim:#8a7f74;
-    --purple:#6600ff;
-    --purple-light:#7c1aff;
-    --purple-pale:#ede8ff;
-    --danger:#e5294a;
-    --success:#00a36c;
-    --warning:#c97a00;
-  }
+    #ds-header { display: flex; align-items: center; justify-content: space-between; padding: 15px 22px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+    .powered { font-size: 10px; color: var(--muted); }
 
-  *{box-sizing:border-box;margin:0;padding:0;}
-  :lang(ja){font-family:'Noto Sans JP','Geist',system-ui,sans-serif;}
-  :lang(zh){font-family:'Noto Sans SC','Geist',system-ui,sans-serif;}
+    #body-wrap { flex: 1; display: flex; overflow: hidden; }
+    #main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 32px 20px 24px; overflow-y: auto; }
 
-  html,body{min-height:100vh;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Geist',system-ui,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
+    .phase { display: none; width: 100%; }
+    .phase.active { display: flex; flex-direction: column; align-items: center; }
+    .ds-content { width: 100%; max-width: min(500px, 90vw); }
 
-  .wrap{max-width:480px;margin:0 auto;padding:32px 16px 80px;}
+    .hero { text-align: center; margin-bottom: 24px; }
+    .eyebrow { font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
+    .hero h1 { font-size: clamp(18px, 4.5vw, 24px); font-weight: 500; letter-spacing: -.03em; line-height: 1.2; margin-bottom: 8px; }
+    .hero p { font-size: 12px; color: var(--muted); }
 
-  /* ---- HEADER ---- */
-  .header-row{
-    display:flex;justify-content:space-between;align-items:center;
-    margin-bottom:28px;
-  }
-  .eyebrow{
-    font-family:'Geist Mono',monospace;font-size:9px;
-    letter-spacing:0.18em;text-transform:uppercase;
-    color:var(--text-dim);margin-bottom:4px;
-  }
-  h1{
-    font-family:'Geist',sans-serif;font-weight:800;
-    font-size:clamp(24px,7vw,34px);
-    color:var(--purple);letter-spacing:-0.02em;
-  }
+    #err-box { background: rgba(239,68,68,.1); border: 0.5px solid var(--red-border); border-radius: 8px; padding: 9px 13px; font-size: 12px; color: var(--red); margin-bottom: 12px; display: none; }
 
-  /* ---- LANG ---- */
-  .lang-switch{position:relative;}
-  .lang-btn{
-    background:var(--purple);border:none;color:#fff;
-    border-radius:10px;padding:8px 13px;
-    font-size:11px;font-weight:700;letter-spacing:0.06em;
-    cursor:pointer;display:flex;align-items:center;gap:6px;
-    transition:all .2s;box-shadow:0 2px 12px rgba(102,0,255,0.25);
-  }
-  .lang-btn:hover{background:var(--purple-light);box-shadow:0 4px 18px rgba(102,0,255,0.35);}
-  .lang-btn svg{width:14px;height:14px;opacity:.8;}
-  .lang-menu{
-    display:none;position:absolute;right:0;top:calc(100% + 8px);
-    background:#fff;border:1px solid var(--border);
-    border-radius:12px;min-width:145px;z-index:100;overflow:hidden;
-    box-shadow:0 12px 32px rgba(0,0,0,0.12);
-  }
-  .lang-menu.show{display:block;animation:fadeIn .15s ease;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
-  .lang-opt{
-    display:block;width:100%;background:none;border:none;
-    color:var(--text-dim);padding:10px 14px;text-align:left;
-    font-size:12.5px;cursor:pointer;
-    border-bottom:1px solid var(--border);transition:all .15s;
-  }
-  .lang-opt:last-child{border-bottom:none;}
-  .lang-opt:hover{background:var(--purple-pale);color:var(--purple);}
-  .lang-opt.active{color:var(--purple);font-weight:700;background:var(--purple-pale);}
+    .ds-tabs { display: flex; gap: 3px; background: #0f0f18; border-radius: 9px; padding: 3px; margin-bottom: 12px; }
+    .ds-tab { flex: 1; padding: 7px; border: none; background: none; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .15s; }
+    .ds-tab.active { background: var(--surface); color: var(--text); border: 0.5px solid var(--border2); }
 
-  /* ---- HERO ---- */
-  .hero{
-    background:linear-gradient(135deg, var(--purple) 0%, #9933ff 100%);
-    border-radius:18px;padding:20px 22px;margin-bottom:14px;
-    display:flex;align-items:center;gap:18px;
-    box-shadow:0 8px 32px rgba(102,0,255,0.25);
-  }
-  .hero-counter{font-family:'Geist',sans-serif;font-weight:800;font-size:44px;color:#fff;line-height:1;min-width:54px;}
-  .hero-info{flex:1;min-width:0;}
-  .hero-label{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:3px;}
-  .hero-name{font-family:'Geist',sans-serif;font-weight:700;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .hero-price{font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;}
+    .input-panel { background: var(--surface); border: 0.5px solid var(--border2); border-radius: 12px; padding: 14px; }
+    .ds-row { display: flex; gap: 8px; }
+    .ds-url-input { flex: 1; font-size: 13px; padding: 0 11px; height: 36px; border-radius: 8px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); outline: none; transition: border-color .15s; }
+    .ds-url-input:focus { border-color: var(--red-border); }
+    .hint { font-size: 11px; color: var(--muted); margin-top: 8px; }
+    .btn-red { height: 36px; padding: 0 15px; background: var(--red-bg); color: var(--red); border: 0.5px solid var(--red-border); border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+    .btn-red:hover { opacity: .8; }
+    .btn-red:disabled { opacity: .38; cursor: not-allowed; }
+    .btn-full { width: 100%; margin-top: 8px; }
 
-  /* ---- TOTALS ---- */
-  .totals{display:flex;gap:10px;margin-bottom:14px;}
-  .total-card{
-    flex:1;background:var(--card);border:1.5px solid var(--border);
-    border-radius:14px;padding:16px;transition:all .2s;
-  }
-  .total-card:hover{border-color:var(--purple);box-shadow:0 4px 16px rgba(102,0,255,0.1);}
-  .total-card .k{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
-  .total-card .v{font-family:'Geist',sans-serif;font-weight:800;font-size:22px;color:var(--purple);}
+    .drop-zone { border: 1.5px dashed var(--border2); border-radius: 10px; padding: 22px 16px; text-align: center; cursor: pointer; transition: border-color .15s; }
+    .drop-zone:hover { border-color: var(--red); }
+    .drop-icon { font-size: 20px; margin-bottom: 6px; }
+    .drop-lbl { font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+    .drop-sub { font-size: 11px; color: var(--muted); }
+    .paste-zone { border: 1.5px dashed var(--border2); border-radius: 10px; padding: 14px 16px; text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    #img-input-wrap { display: flex; flex-direction: column; gap: 8px; }
+    #img-preview { display: none; position: relative; }
+    #img-preview img { width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    #clear-img { position: absolute; top: 5px; right: 5px; background: rgba(10,10,15,.85); border: 0.5px solid var(--border2); color: #aaa; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-  /* ---- SAVINGS ---- */
-  .savings{
-    background:var(--card);border:1.5px solid var(--border);
-    border-radius:14px;padding:14px 16px;margin-bottom:14px;
-  }
-  .savings-title{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--warning);margin-bottom:10px;font-weight:700;}
-  .savings-items{display:flex;flex-direction:column;gap:6px;}
-  .saving-item{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:9px 11px;background:var(--bg-2);
-    border-radius:9px;border:1px solid var(--border);font-size:12px;
-  }
-  .saving-name{color:var(--text);font-weight:500;}
-  .saving-amount{color:var(--warning);font-weight:700;}
-  .saving-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:11px;padding:2px 6px;transition:all .2s;}
-  .saving-btn:hover{color:var(--danger);}
+    #phase-scanning { text-align: center; padding-top: 52px; }
+    .spinner { width: 38px; height: 38px; border: 2.5px solid var(--surface2); border-top-color: var(--red); border-radius: 50%; animation: spin .85s linear infinite; margin: 0 auto 18px; }
+    #scanning-steps { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 240px; margin-left: auto; margin-right: auto; }
+    .s-step { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .s-step.done { color: var(--green); }
+    .s-step.active { color: var(--text); }
+    .s-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .s-step.done .s-dot { background: var(--green); }
+    .s-step.active .s-dot { background: var(--red); }
 
-  /* ---- QUICK ADD ---- */
-  .quickadd{margin-bottom:12px;}
-  .quickadd-label{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;font-weight:600;}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;}
-  .chip{
-    background:var(--card);border:1.5px solid var(--border);
-    color:var(--text);border-radius:9px;
-    padding:0;font-size:12px;font-weight:600;
-    cursor:pointer;transition:all .2s;
-    white-space:nowrap;display:flex;align-items:stretch;overflow:hidden;
-  }
-  .chip:hover{border-color:var(--purple);box-shadow:0 2px 10px rgba(102,0,255,0.12);transform:translateY(-1px);}
-  .chip:active{transform:translateY(0);}
-  .chip-name{padding:7px 11px;flex:1;display:flex;align-items:center;}
-  .chip-name:hover{color:var(--purple);}
-  .chip-stop{
-    padding:7px 9px;border:none;
-    border-left:1px solid var(--border);
-    font-size:10px;font-family:'Geist Mono',monospace;
-    color:var(--danger);display:flex;align-items:center;gap:3px;
-    cursor:pointer;transition:all .2s;background:rgba(229,41,74,0.05);
-  }
-  .chip-stop:hover{background:rgba(229,41,74,0.12);}
+    #phase-result { gap: 20px; }
+    #score-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    #score-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+    #product-info { text-align: center; }
+    #product-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    #product-summary { font-size: 12px; color: #666; line-height: 1.6; max-width: 340px; }
+    .sec-lbl { font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    #sources-wrap, #signals-wrap { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .source-link { display: flex; align-items: center; gap: 10px; padding: 10px 13px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 9px; text-decoration: none; color: var(--text); transition: border-color .15s; }
+    .source-link:hover { border-color: var(--red-border); }
+    .src-icon { font-size: 16px; }
+    .src-info { flex: 1; }
+    .src-name { font-size: 12px; font-weight: 600; }
+    .src-desc { font-size: 11px; color: #666; }
+    .src-arrow { color: var(--muted); font-size: 13px; }
+    .signal-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 9px; font-size: 12px; }
+    .sig-icon { flex-shrink: 0; }
+    .sig-title { font-weight: 500; color: #d0d0d8; margin-right: 4px; }
+    .sig-detail { color: #666; }
+    #reset-btn { width: 100%; background: none; border: 0.5px solid var(--border); border-radius: 9px; color: var(--muted); font-size: 12px; padding: 10px; cursor: pointer; transition: all .15s; }
+    #reset-btn:hover { border-color: #333; color: #aaa; }
 
-  /* ---- ADD BUTTON ---- */
-  .addbtn{
-    width:100%;background:var(--purple);color:#fff;
-    border:none;border-radius:12px;padding:14px;
-    font-family:'Geist',sans-serif;font-weight:700;font-size:14px;
-    cursor:pointer;margin-bottom:12px;transition:all .2s;
-    box-shadow:0 4px 18px rgba(102,0,255,0.3);letter-spacing:0.01em;
-  }
-  .addbtn:hover{background:var(--purple-light);transform:translateY(-1px);box-shadow:0 8px 28px rgba(102,0,255,0.4);}
-  .addbtn:active{transform:translateY(0);}
-
-  /* ---- FORM ---- */
-  .form-card{
-    display:none;background:var(--card);
-    border:1.5px solid var(--border);
-    border-radius:14px;padding:18px;margin-bottom:14px;
-  }
-  .form-card.show{display:block;animation:fadeIn .2s ease;}
-  .form-title{font-family:'Geist',sans-serif;font-weight:700;font-size:15px;margin-bottom:14px;color:var(--purple);}
-  .field{margin-bottom:11px;}
-  .field label{
-    display:block;font-family:'Geist Mono',monospace;
-    font-size:9px;letter-spacing:0.08em;text-transform:uppercase;
-    color:var(--text-dim);margin-bottom:5px;
-  }
-  .row2{display:flex;gap:8px;}
-  .row2 .field{flex:1;}
-  input,select{
-    width:100%;background:var(--bg);
-    border:1.5px solid var(--border);color:var(--text);
-    border-radius:8px;padding:10px 12px;font-size:13px;
-    font-family:'Geist',sans-serif;transition:all .2s;
-  }
-  input::placeholder{color:var(--text-dim);}
-  input:focus,select:focus{outline:none;border-color:var(--purple);background:#fff;box-shadow:0 0 0 3px rgba(102,0,255,0.1);}
-  select option{background:#fff;color:var(--text);}
-  .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(36px,1fr));gap:7px;margin-top:7px;}
-  .swatch{width:100%;aspect-ratio:1;border-radius:8px;border:2px solid transparent;cursor:pointer;transition:all .2s;}
-  .swatch:hover{transform:scale(1.1);}
-  .swatch.active{border-color:var(--purple);box-shadow:0 0 0 3px rgba(102,0,255,0.2);}
-  .form-actions{display:flex;gap:8px;margin-top:14px;}
-  .btn-primary{
-    flex:1;background:var(--purple);color:#fff;border:none;border-radius:8px;
-    padding:11px;font-family:'Geist',sans-serif;font-weight:700;font-size:13px;
-    cursor:pointer;transition:all .2s;box-shadow:0 3px 12px rgba(102,0,255,0.25);
-  }
-  .btn-primary:hover{background:var(--purple-light);}
-  .btn-ghost{
-    background:none;border:1.5px solid var(--border);color:var(--text-dim);
-    border-radius:8px;padding:11px 14px;font-size:13px;cursor:pointer;transition:all .2s;
-  }
-  .btn-ghost:hover{border-color:var(--purple);color:var(--purple);}
-  .form-error{color:var(--danger);font-size:11px;margin-top:7px;display:none;}
-  .form-error.show{display:block;}
-
-  /* ---- LIST ---- */
-  .list-label{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin:4px 0 10px;}
-  .sub-row{
-    display:flex;align-items:center;gap:10px;
-    background:var(--card);border:1.5px solid var(--border);
-    border-left:3px solid var(--purple);
-    border-radius:12px;padding:13px 14px;margin-bottom:8px;transition:all .2s;
-  }
-  .sub-row:hover{border-color:var(--purple);box-shadow:0 4px 16px rgba(102,0,255,0.1);}
-  .sub-main{flex:1;min-width:0;}
-  .sub-name{font-family:'Geist',sans-serif;font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .sub-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
-  .sub-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
-  .badge{
-    font-family:'Geist Mono',monospace;font-size:9px;font-weight:700;
-    padding:3px 8px;border-radius:20px;white-space:nowrap;
-  }
-  .badge.urgent{background:rgba(229,41,74,0.1);color:var(--danger);border:1px solid rgba(229,41,74,0.2);}
-  .badge.soon{background:rgba(201,122,0,0.1);color:var(--warning);border:1px solid rgba(201,122,0,0.2);}
-  .badge.safe{background:rgba(0,163,108,0.1);color:var(--success);border:1px solid rgba(0,163,108,0.2);}
-  .sub-date{font-family:'Geist Mono',monospace;font-size:10px;color:var(--text-dim);}
-  .sub-actions{display:flex;gap:5px;margin-left:4px;flex-shrink:0;align-items:center;}
-  .icon-btn{
-    background:var(--bg-2);border:1.5px solid var(--border);
-    color:var(--text-dim);cursor:pointer;
-    padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-    transition:all .2s;
-  }
-  .icon-btn:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-pale);}
-  .icon-btn svg{width:14px;height:14px;}
-  .stop-btn{
-    background:rgba(229,41,74,0.06);border-color:rgba(229,41,74,0.2);
-    color:var(--danger);font-size:10px;font-family:'Geist Mono',monospace;
-    gap:4px;padding:6px 9px;white-space:nowrap;
-  }
-  .stop-btn:hover{background:rgba(229,41,74,0.14);border-color:rgba(229,41,74,0.4);color:var(--danger);}
-
-  .reminder-btn{
-    background:rgba(102,0,255,0.08);border-color:rgba(102,0,255,0.2);
-    color:var(--purple);
-  }
-  .reminder-btn:hover{background:rgba(102,0,255,0.18);border-color:var(--purple);color:var(--purple);}
-
-  .empty{
-    text-align:center;padding:40px 20px;
-    color:var(--text-dim);font-size:12px;
-    border:1.5px dashed var(--border);border-radius:12px;line-height:1.7;
-  }
-  .footnote{
-    margin-top:20px;padding-top:14px;
-    border-top:1.5px solid var(--border);
-    font-size:11px;line-height:1.6;color:var(--text-dim);
-  }
-  .toast{
-    position:fixed;left:50%;bottom:24px;transform:translate(-50%,12px);
-    background:var(--purple);color:#fff;
-    padding:11px 18px;border-radius:10px;
-    font-size:12px;font-weight:600;
-    opacity:0;pointer-events:none;
-    transition:opacity .25s ease,transform .25s ease;z-index:50;
-    box-shadow:0 8px 24px rgba(102,0,255,0.35);
-  }
-  .toast.show{opacity:1;transform:translate(-50%,0);}
-</style>
+    #sidebar { width: 230px; flex-shrink: 0; border-left: 0.5px solid var(--border); display: none; flex-direction: column; overflow-y: auto; }
+    #sidebar.visible { display: flex; }
+    .sidebar-header { padding: 15px 14px 10px; border-bottom: 0.5px solid var(--border); font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: #444; flex-shrink: 0; }
+    #history-list { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+    .history-empty { padding: 24px 16px; text-align: center; }
+    .history-empty .h-icon { font-size: 22px; margin-bottom: 8px; }
+    .history-empty span { font-size: 11px; color: #444; }
+    .history-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 9px; cursor: pointer; text-align: left; width: 100%; transition: border-color .15s; }
+    .history-item:hover { border-color: var(--border2); }
+    .h-info { flex: 1; min-width: 0; }
+    .h-name { font-size: 12px; font-weight: 500; color: #c0c0c8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .h-time { font-size: 10px; color: #444; margin-top: 2px; }
+    .h-score { font-size: 11px; font-weight: 600; flex-shrink: 0; }
+    .kbd { background:#1c1c28;border:0.5px solid #333;border-radius:4px;padding:1px 5px;font-size:11px; }
+    footer { text-align: center; font-size: 10px; color: #2a2a3a; padding: 8px 0 14px; flex-shrink: 0; }
+  </style>
 </head>
 <body>
-<div class="wrap">
 
-  <div class="header-row">
-    <div>
-      <div class="eyebrow" id="eyebrowText">Contrôle des dépenses</div>
-      <h1 id="titleText">Abonnements</h1>
-    </div>
-    <div class="lang-switch" id="langSwitch">
-      <button class="lang-btn" id="langBtn" aria-haspopup="listbox" aria-expanded="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18Z"/></svg>
-        <span id="langCode">FR</span>
-      </button>
-      <div class="lang-menu" id="langMenu" role="listbox">
-        <button class="lang-opt" data-lang="fr" role="option">Français</button>
-        <button class="lang-opt" data-lang="en" role="option">English (US)</button>
-        <button class="lang-opt" data-lang="gb" role="option">English (UK)</button>
-        <button class="lang-opt" data-lang="es" role="option">Español</button>
-        <button class="lang-opt" data-lang="de" role="option">Deutsch</button>
-        <button class="lang-opt" data-lang="ja" role="option">日本語</button>
-        <button class="lang-opt" data-lang="zh" role="option">中文</button>
+<header id="ds-header">
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <rect width="26" height="26" rx="6" fill="rgba(239,68,68,0.14)"/>
+      <circle cx="13" cy="13" r="7.5" stroke="rgb(239,68,68)" stroke-width="1.2" fill="none"/>
+      <line x1="13" y1="3.5" x2="13" y2="2" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="13" y1="24" x2="13" y2="22.5" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="3.5" y1="13" x2="2" y2="13" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="24" y1="13" x2="22.5" y2="13" stroke="rgb(239,68,68)" stroke-width="1.3" stroke-linecap="round"/>
+      <polyline points="9.5,13 12.5,16 17.5,10.5" stroke="rgb(239,68,68)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    DropScan
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="powered">IA via pollinations.ai · gratuit</div>
+    <select id="lang-select" aria-label="Langue / Language" style="background:var(--surface);color:var(--text);border:0.5px solid var(--border2);border-radius:7px;font-size:11px;padding:4px 7px;cursor:pointer;outline:none;">
+      <option value="fr">🇫🇷 Français</option>
+      <option value="en">🇬🇧 English</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="it">🇮🇹 Italiano</option>
+      <option value="pt">🇵🇹 Português</option>
+      <option value="nl">🇳🇱 Nederlands</option>
+      <option value="ar">🇸🇦 العربية</option>
+      <option value="zh">🇨🇳 中文</option>
+      <option value="ja">🇯🇵 日本語</option>
+      <option value="ru">🇷🇺 Русский</option>
+    </select>
+  </div>
+</header>
+
+<div id="body-wrap">
+  <main id="main-content">
+
+    <!-- IDLE -->
+    <div id="phase-idle" class="phase active dsfade">
+      <div class="ds-content">
+        <div class="hero">
+          <div class="eyebrow" data-i18n="eyebrow">Détecteur de dropshipping</div>
+          <h1 data-i18n="heroTitle">Ce produit vient-il<br>d'AliExpress ?</h1>
+          <p data-i18n="heroSub">Lien ou image → verdict instantané · fonctionne depuis n'importe quel navigateur</p>
+        </div>
+        <div id="err-box"></div>
+        <div class="ds-tabs">
+          <button class="ds-tab active" onclick="switchTab('url')"><span data-i18n="tabLink">🔗 Lien</span></button>
+          <button class="ds-tab" onclick="switchTab('img')"><span data-i18n="tabImg">🖼️ Image</span></button>
+        </div>
+        <div id="tab-url" class="input-panel">
+          <div class="ds-row">
+            <input class="ds-url-input" type="url" id="url-input" data-i18n-placeholder="urlPlaceholder" placeholder="https://boutique.com/produit…" />
+            <button class="btn-red" onclick="goUrl()" data-i18n="scanBtn">Scanner</button>
+          </div>
+          <p class="hint" data-i18n="urlHint">Shopify, TikTok Shop, Amazon, Instagram…</p>
+        </div>
+        <div id="tab-img" class="input-panel" style="display:none;flex-direction:column;gap:8px;">
+          <div class="paste-zone" id="paste-hint" data-i18n="pasteHint">📋 Coller une image (Ctrl+V)</div>
+          <div id="img-input-wrap">
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+              <input type="file" id="file-input" accept="image/*" style="display:none" />
+              <div class="drop-icon">📁</div>
+              <div class="drop-lbl" data-i18n="dropLabel">Déposez ou cliquez</div>
+              <div class="drop-sub">JPG, PNG, WEBP</div>
+            </div>
+            <div id="img-preview">
+              <img id="preview-img" src="" alt="Aperçu" />
+              <button id="clear-img" onclick="clearImg()">✕</button>
+            </div>
+          </div>
+          <button class="btn-red btn-full" id="analyze-img-btn" onclick="goImg()" disabled data-i18n="analyzeImgBtn">⚡ Analyser l'image</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="hero" id="hero" style="display:none;">
-    <div class="hero-counter" id="heroCounter">—</div>
-    <div class="hero-info">
-      <div class="hero-label">Prochain prélèvement</div>
-      <div class="hero-name" id="heroName">—</div>
-      <div class="hero-price" id="heroPrice">—</div>
-    </div>
-  </div>
-
-  <div class="totals">
-    <div class="total-card">
-      <div class="k">Par mois</div>
-      <div class="v" id="totalMonth">—</div>
-    </div>
-    <div class="total-card">
-      <div class="k">Par an</div>
-      <div class="v" id="totalYear">—</div>
-    </div>
-  </div>
-
-  <div class="savings" id="savingsSection" style="display:none;">
-    <div class="savings-title">Économies potentielles</div>
-    <div class="savings-items" id="savingsList"></div>
-  </div>
-
-  <div class="quickadd">
-    <div class="quickadd-label">Ajout rapide</div>
-    <div class="chips" id="quickChips"></div>
-  </div>
-
-  <button class="addbtn" id="toggleForm">+ Ajouter</button>
-
-  <div class="form-card" id="formCard">
-    <div class="form-title" id="formTitle">Nouvel abonnement</div>
-    <div class="field">
-      <label for="fName">Nom</label>
-      <input type="text" id="fName" placeholder="Netflix, Spotify...">
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label for="fPrice">Prix</label>
-        <input type="number" id="fPrice" step="0.01" min="0" placeholder="9.99">
-      </div>
-      <div class="field">
-        <label for="fFreq">Fréquence</label>
-        <select id="fFreq">
-          <option value="mensuel">Mensuel</option>
-          <option value="annuel">Annuel</option>
-          <option value="trimestriel">Trimestriel</option>
-          <option value="hebdomadaire">Hebdomadaire</option>
-        </select>
+    <!-- SCANNING -->
+    <div id="phase-scanning" class="phase">
+      <div class="spinner"></div>
+      <div style="font-size:12px;color:var(--muted)" data-i18n="scanningInProgress">Analyse en cours…</div>
+      <div id="scanning-steps">
+        <div class="s-step" id="st0"><div class="s-dot"></div><span data-i18n="step0">Identification du produit</span></div>
+        <div class="s-step" id="st1"><div class="s-dot"></div><span data-i18n="step1">Recherche sur AliExpress / Temu</span></div>
+        <div class="s-step" id="st2"><div class="s-dot"></div><span data-i18n="step2">Comparaison prix & images</span></div>
+        <div class="s-step" id="st3"><div class="s-dot"></div><span data-i18n="step3">Génération du verdict</span></div>
       </div>
     </div>
-    <div class="field">
-      <label for="fDate">Prochain prélèvement</label>
-      <input type="date" id="fDate">
-    </div>
-    <div class="field">
-      <label>Couleur</label>
-      <div class="swatches" id="swatches"></div>
-    </div>
-    <div class="form-error" id="formError">Renseigne au moins un nom, un prix et une date.</div>
-    <div class="form-actions">
-      <button class="btn-primary" id="saveBtn">Enregistrer</button>
-      <button class="btn-ghost" id="cancelBtn">Annuler</button>
-    </div>
-  </div>
 
-  <div class="list-label" id="listLabel" style="display:none;">Tes abonnements</div>
-  <div id="list"></div>
-  <div class="empty" id="emptyState">Aucun abonnement pour l'instant.<br>Ajoute le premier ci-dessus.</div>
+    <!-- RESULT -->
+    <div id="phase-result" class="phase dsfade">
+      <div class="ds-content" style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+        <div id="score-ring-wrap">
+          <svg width="176" height="176" viewBox="0 0 176 176">
+            <circle cx="88" cy="88" r="78" fill="none" stroke="#1a1a24" stroke-width="4"/>
+            <circle id="score-progress" cx="88" cy="88" r="78" fill="none"
+              stroke="#ef4444" stroke-width="4"
+              stroke-dasharray="490.09" stroke-dashoffset="490.09"
+              stroke-linecap="round" transform="rotate(-90 88 88)"/>
+            <text id="score-number" x="88" y="82" text-anchor="middle" fill="#f0f0ec" font-size="36" font-weight="500" font-family="Inter,system-ui,sans-serif">0</text>
+            <text x="88" y="100" text-anchor="middle" fill="#555" font-size="12" font-family="Inter,system-ui,sans-serif">%</text>
+          </svg>
+          <div id="score-label">—</div>
+        </div>
+        <div id="product-info">
+          <div id="product-name"></div>
+          <div id="product-summary"></div>
+        </div>
+        <div id="sources-section" style="width:100%;display:none">
+          <div class="sec-lbl" data-i18n="probableSource">Source probable</div>
+          <div id="sources-wrap"></div>
+        </div>
+        <div id="signals-section" style="width:100%;display:none">
+          <div id="signals-wrap"></div>
+        </div>
+        <button id="reset-btn" onclick="reset()" data-i18n="resetBtn">↩ Analyser un autre produit</button>
+      </div>
+    </div>
 
-  <div class="footnote">
-    <b style="color:var(--paper);">À savoir.</b> Les alertes s'affichent quand tu rouvres cette page. Pour un rappel réel sur ton téléphone, demande à Claude de le créer dans tes Rappels.
-  </div>
+  </main>
 
+  <aside id="sidebar">
+    <div class="sidebar-header" data-i18n="recentAnalyses">Analyses récentes</div>
+    <div id="history-list">
+      <div class="history-empty"><div class="h-icon">🕓</div><span data-i18n="noAnalysis">Aucune analyse</span></div>
+    </div>
+  </aside>
 </div>
 
-<div class="toast" id="toast"></div>
+<footer><span data-i18n="footerText">© 2025 DropScan — Résultats indicatifs · IA via</span> <a href="https://pollinations.ai" target="_blank" style="color:inherit">pollinations.ai</a> <span data-i18n="footerFree">(gratuit, sans clé)</span></footer>
 
 <script>
-  const LANG_CONFIG = {
-    fr: { currency: 'EUR', locale: 'fr-FR' },
-    en: { currency: 'USD', locale: 'en-US' },
-    gb: { currency: 'GBP', locale: 'en-GB' },
-    es: { currency: 'EUR', locale: 'es-ES' },
-    de: { currency: 'EUR', locale: 'de-DE' },
-    ja: { currency: 'JPY', locale: 'ja-JP' },
-    zh: { currency: 'CNY', locale: 'zh-CN' },
-  };
-  const getCurrency = () => LANG_CONFIG[currentLang]?.currency || 'EUR';
-  const getLocale  = () => LANG_CONFIG[currentLang]?.locale  || 'fr-FR';
-  const SWATCH_COLORS = [
-    '#00d4ff','#7c3aed','#ec4899','#f59e0b','#10b981','#06b6d4',
-    '#3b82f6','#ef4444','#8b5cf6','#14b8a6','#f97316','#d946ef',
-    '#0ea5e9','#16a34a','#ca8a04','#e11d48','#7dd3fc','#86efac'
-  ];
-  
-  const i18n = {
-    fr: {
-      eyebrow: 'Contrôle des dépenses',
-      title: 'Abonnements',
-      nextPayment: 'Prochain prélèvement',
-      perMonth: 'Par mois',
-      perYear: 'Par an',
-      quickAdd: 'Ajout rapide',
-      addBtn: '+ Ajouter',
-      newSub: 'Nouvel abonnement',
-      editSub: 'Modifier l\'abonnement',
-      name: 'Nom',
-      price: 'Prix',
-      frequency: 'Fréquence',
-      nextDate: 'Prochain prélèvement',
-      color: 'Couleur',
-      save: 'Enregistrer',
-      cancel: 'Annuler',
-      monthly: 'Mensuel',
-      annual: 'Annuel',
-      quarterly: 'Trimestriel',
-      weekly: 'Hebdomadaire',
-      formError: 'Renseigne au moins un nom, un prix et une date.',
-      yourSubs: 'Tes abonnements',
-      empty: 'Aucun abonnement pour l\'instant.\nAjoute le premier ci-dessus.',
-      today: 'Aujourd\'hui',
-      tomorrow: 'Demain',
-      inDays: 'Dans',
-      days: 'j',
-      delete: 'Supprimer',
-      deleteConfirm: 'Supprimer cet abonnement ?',
-      tooltipDelete: 'Supprimer',
-      tooltipEdit: 'Modifier',
-      freqMonth: '/ mois',
-      freqYear: '/ an',
-      freqQuarter: '/ trim.',
-      freqWeek: '/ sem.',
-      saveError: 'Sauvegarde impossible — réessaie.',
-      saveErrorFull: 'Erreur de sauvegarde.',
-      footnote: 'À savoir.',
-      footnoteText: 'Les alertes s\'affichent quand tu rouvres cette page. Pour un rappel réel sur ton téléphone, demande à Claude de le créer dans tes Rappels.',
-      savings: 'Économies potentielles',
-    },
-    en: {
-      eyebrow: 'Recurring expenses',
-      title: 'Subscriptions',
-      nextPayment: 'Next billing',
-      perMonth: 'Per month',
-      perYear: 'Per year',
-      quickAdd: 'Quick add',
-      addBtn: '+ Add',
-      newSub: 'New subscription',
-      editSub: 'Edit subscription',
-      name: 'Name',
-      price: 'Price',
-      frequency: 'Frequency',
-      nextDate: 'Next billing date',
-      color: 'Color',
-      save: 'Save',
-      cancel: 'Cancel',
-      monthly: 'Monthly',
-      annual: 'Annual',
-      quarterly: 'Quarterly',
-      weekly: 'Weekly',
-      formError: 'Please enter at least a name, price, and date.',
-      yourSubs: 'Your subscriptions',
-      empty: 'No subscriptions yet.\nAdd your first one above.',
-      today: 'Today',
-      tomorrow: 'Tomorrow',
-      inDays: 'In',
-      days: 'd',
-      delete: 'Delete',
-      deleteConfirm: 'Delete this subscription?',
-      tooltipDelete: 'Delete',
-      tooltipEdit: 'Edit',
-      freqMonth: '/ month',
-      freqYear: '/ year',
-      freqQuarter: '/ quarter',
-      freqWeek: '/ week',
-      saveError: 'Save failed — try again.',
-      saveErrorFull: 'Save error.',
-      footnote: 'Note.',
-      footnoteText: 'Alerts appear when you reopen this page. For a real reminder on your phone, ask Claude to create it in your Reminders.',
-      savings: 'Potential savings',
-    },
-    gb: {
-      eyebrow: 'Recurring expenses',
-      title: 'Subscriptions',
-      nextPayment: 'Next billing',
-      perMonth: 'Per month',
-      perYear: 'Per year',
-      quickAdd: 'Quick add',
-      addBtn: '+ Add',
-      newSub: 'New subscription',
-      editSub: 'Edit subscription',
-      name: 'Name',
-      price: 'Price',
-      frequency: 'Frequency',
-      nextDate: 'Next billing date',
-      color: 'Colour',
-      save: 'Save',
-      cancel: 'Cancel',
-      monthly: 'Monthly',
-      annual: 'Annual',
-      quarterly: 'Quarterly',
-      weekly: 'Weekly',
-      formError: 'Please enter at least a name, price, and date.',
-      yourSubs: 'Your subscriptions',
-      empty: 'No subscriptions yet.\nAdd your first one above.',
-      today: 'Today',
-      tomorrow: 'Tomorrow',
-      inDays: 'In',
-      days: 'd',
-      delete: 'Delete',
-      deleteConfirm: 'Delete this subscription?',
-      tooltipDelete: 'Delete',
-      tooltipEdit: 'Edit',
-      freqMonth: '/ month',
-      freqYear: '/ year',
-      freqQuarter: '/ quarter',
-      freqWeek: '/ week',
-      saveError: 'Save failed — try again.',
-      saveErrorFull: 'Save error.',
-      footnote: 'Note.',
-      footnoteText: 'Alerts appear when you reopen this page. For a real reminder on your phone, ask Claude to create it in your Reminders.',
-      savings: 'Potential savings',
-    },
-    es: {
-      eyebrow: 'Control de gastos',
-      title: 'Suscripciones',
-      nextPayment: 'Próximo cobro',
-      perMonth: 'Por mes',
-      perYear: 'Por año',
-      quickAdd: 'Añadir rápido',
-      addBtn: '+ Añadir',
-      newSub: 'Nueva suscripción',
-      editSub: 'Editar suscripción',
-      name: 'Nombre',
-      price: 'Precio',
-      frequency: 'Frecuencia',
-      nextDate: 'Próxima fecha de cobro',
-      color: 'Color',
-      save: 'Guardar',
-      cancel: 'Cancelar',
-      monthly: 'Mensual',
-      annual: 'Anual',
-      quarterly: 'Trimestral',
-      weekly: 'Semanal',
-      formError: 'Por favor ingresa al menos un nombre, precio y fecha.',
-      yourSubs: 'Tus suscripciones',
-      empty: 'Sin suscripciones aún.\nAgrega la primera arriba.',
-      today: 'Hoy',
-      tomorrow: 'Mañana',
-      inDays: 'En',
-      days: 'd',
-      delete: 'Eliminar',
-      deleteConfirm: '¿Eliminar esta suscripción?',
-      tooltipDelete: 'Eliminar',
-      tooltipEdit: 'Editar',
-      freqMonth: '/ mes',
-      freqYear: '/ año',
-      freqQuarter: '/ trimestre',
-      freqWeek: '/ semana',
-      saveError: 'Error al guardar — intenta de nuevo.',
-      saveErrorFull: 'Error de guardado.',
-      footnote: 'Nota.',
-      footnoteText: 'Las alertas aparecen cuando reabre esta página. Para un recordatorio real en su teléfono, pídele a Claude que lo cree en tus Recordatorios.',
-      savings: 'Ahorros potenciales',
-    },
-    de: {
-      eyebrow: 'Kontrolle von Ausgaben',
-      title: 'Abonnements',
-      nextPayment: 'Nächste Abrechnung',
-      perMonth: 'Pro Monat',
-      perYear: 'Pro Jahr',
-      quickAdd: 'Schnell hinzufügen',
-      addBtn: '+ Hinzufügen',
-      newSub: 'Neues Abonnement',
-      editSub: 'Abonnement bearbeiten',
-      name: 'Name',
-      price: 'Preis',
-      frequency: 'Häufigkeit',
-      nextDate: 'Nächstes Abrechnungsdatum',
-      color: 'Farbe',
-      save: 'Speichern',
-      cancel: 'Abbrechen',
-      monthly: 'Monatlich',
-      annual: 'Jährlich',
-      quarterly: 'Vierteljährlich',
-      weekly: 'Wöchentlich',
-      formError: 'Bitte geben Sie mindestens einen Namen, Preis und ein Datum ein.',
-      yourSubs: 'Deine Abonnements',
-      empty: 'Noch keine Abonnements.\nFügen Sie das erste oben hinzu.',
-      today: 'Heute',
-      tomorrow: 'Morgen',
-      inDays: 'In',
-      days: 'T',
-      delete: 'Löschen',
-      deleteConfirm: 'Dieses Abonnement löschen?',
-      tooltipDelete: 'Löschen',
-      tooltipEdit: 'Bearbeiten',
-      freqMonth: '/ Monat',
-      freqYear: '/ Jahr',
-      freqQuarter: '/ Quartal',
-      freqWeek: '/ Woche',
-      saveError: 'Speichern fehlgeschlagen — versuchen Sie es erneut.',
-      saveErrorFull: 'Fehler beim Speichern.',
-      footnote: 'Hinweis.',
-      footnoteText: 'Warnungen werden angezeigt, wenn Sie diese Seite erneut öffnen. Für einen echten Reminder auf Ihrem Telefon bitten Sie Claude, ihn in Ihren Erinnerungen zu erstellen.',
-      savings: 'Potenzielle Einsparungen',
-    },
-    ja: {
-      eyebrow: 'サブスク管理',
-      title: 'サブスクリプション',
-      nextPayment: '次回請求',
-      perMonth: '月額',
-      perYear: '年額',
-      quickAdd: 'クイック追加',
-      addBtn: '+ 追加',
-      newSub: '新しいサブスク',
-      editSub: 'サブスク編集',
-      name: '名前',
-      price: '価格',
-      frequency: '頻度',
-      nextDate: '次回請求日',
-      color: '色',
-      save: '保存',
-      cancel: 'キャンセル',
-      monthly: '月額',
-      annual: '年額',
-      quarterly: '3ヶ月',
-      weekly: '週額',
-      formError: '名前、価格、日付を入力してください。',
-      yourSubs: 'あなたのサブスク',
-      empty: 'サブスクはまだありません。\n上から最初のものを追加してください。',
-      today: '今日',
-      tomorrow: '明日',
-      inDays: '後',
-      days: '日',
-      delete: '削除',
-      deleteConfirm: 'このサブスクを削除しますか？',
-      tooltipDelete: '削除',
-      tooltipEdit: '編集',
-      freqMonth: '/ 月',
-      freqYear: '/ 年',
-      freqQuarter: '/ 3ヶ月',
-      freqWeek: '/ 週',
-      saveError: '保存に失敗しました。もう一度試してください。',
-      saveErrorFull: '保存エラー',
-      footnote: '注意',
-      footnoteText: 'このページを再度開くとアラートが表示されます。電話に実際のリマインダーを設定するには、Claudeにあなたのリマインダーで作成するよう頼んでください。',
-      savings: '節約の可能性',
-    },
-    zh: {
-      eyebrow: '订阅管理',
-      title: '订阅跟踪',
-      nextPayment: '下次扣款',
-      perMonth: '每月',
-      perYear: '每年',
-      quickAdd: '快速添加',
-      addBtn: '+ 添加',
-      newSub: '新订阅',
-      editSub: '编辑订阅',
-      name: '名称',
-      price: '价格',
-      frequency: '频率',
-      nextDate: '下次扣款日期',
-      color: '颜色',
-      save: '保存',
-      cancel: '取消',
-      monthly: '每月',
-      annual: '每年',
-      quarterly: '每季度',
-      weekly: '每周',
-      formError: '请至少输入名称、价格和日期。',
-      yourSubs: '你的订阅',
-      empty: '目前没有订阅。\n从上面添加第一个。',
-      today: '今天',
-      tomorrow: '明天',
-      inDays: '后',
-      days: '天',
-      delete: '删除',
-      deleteConfirm: '确定要删除此订阅吗？',
-      tooltipDelete: '删除',
-      tooltipEdit: '编辑',
-      freqMonth: '/ 月',
-      freqYear: '/ 年',
-      freqQuarter: '/ 季',
-      freqWeek: '/ 周',
-      saveError: '保存失败 — 请重试。',
-      saveErrorFull: '保存错误。',
-      footnote: '注意',
-      footnoteText: '当您重新打开此页面时会显示警报。如需在手机上获得真正的提醒，请让Claude在您的提醒中创建。',
-      savings: '潜在节省',
-    }
-  };
-
-  let currentLang = localStorage.getItem('subTrackerLang') || 'fr';
-  let state = { items: [] };
-  let editingId = null;
-  let pickedColor = SWATCH_COLORS[0];
-
-  const $ = id => document.getElementById(id);
-  const t = key => i18n[currentLang]?.[key] || i18n.fr[key] || key;
-  const todayMid = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
-  const fmtMoney = v => new Intl.NumberFormat(getLocale(), {style:'currency', currency: getCurrency(), maximumFractionDigits: getCurrency() === 'JPY' ? 0 : 2}).format(v);
-  const fmtDate = d => d.toLocaleDateString(getLocale(), {day:'2-digit', month:'short'});
-  const todayISO = () => { const d = new Date(); return d.toISOString().slice(0,10); };
-
-  function setLanguage(lang) {
-    if (!i18n[lang]) return;
-    currentLang = lang;
-    localStorage.setItem('subTrackerLang', lang);
-    document.documentElement.lang = lang;
-    updateUI();
-    updateLangButton();
+// ══════════════════════════════════════════
+// ── Traduction automatique de l'interface ──
+// ══════════════════════════════════════════
+const I18N = {
+  fr: {
+    eyebrow: "Détecteur de dropshipping",
+    heroTitle: "Ce produit vient-il<br>d'AliExpress ?",
+    heroSub: "Lien ou image → verdict instantané · fonctionne depuis n'importe quel navigateur",
+    tabLink: "🔗 Lien", tabImg: "🖼️ Image",
+    urlPlaceholder: "https://boutique.com/produit…",
+    scanBtn: "Scanner",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Coller une image (Ctrl+V)",
+    pasteHintHover: 'Copiez puis <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Déposez ou cliquez",
+    analyzeImgBtn: "⚡ Analyser l'image",
+    scanningInProgress: "Analyse en cours…",
+    step0: "Identification du produit", step1: "Recherche sur AliExpress / Temu",
+    step2: "Comparaison prix & images", step3: "Génération du verdict",
+    probableSource: "Source probable",
+    resetBtn: "↩ Analyser un autre produit",
+    recentAnalyses: "Analyses récentes",
+    noAnalysis: "Aucune analyse",
+    footerText: "© 2025 DropScan — Résultats indicatifs · IA via",
+    footerFree: "(gratuit, sans clé)",
+    errEnterLink: "Entrez un lien produit.",
+    errSelectImg: "Sélectionnez ou collez une image.",
+    errAnalysis: "Analyse impossible : {err} — Vérifiez votre connexion et réessayez.",
+    legit: "Légitime", suspect: "Suspect", dropship: "Dropshipping",
+    locale: "fr-FR", htmlLang: "fr", dir: "ltr",
+    aiInstruction: "Réponds en français."
+  },
+  en: {
+    eyebrow: "Dropshipping detector",
+    heroTitle: "Does this product<br>come from AliExpress?",
+    heroSub: "Link or image → instant verdict · works from any browser",
+    tabLink: "🔗 Link", tabImg: "🖼️ Image",
+    urlPlaceholder: "https://store.com/product…",
+    scanBtn: "Scan",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Paste an image (Ctrl+V)",
+    pasteHintHover: 'Copy then <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Drop or click",
+    analyzeImgBtn: "⚡ Analyze image",
+    scanningInProgress: "Analyzing…",
+    step0: "Identifying the product", step1: "Searching AliExpress / Temu",
+    step2: "Comparing prices & images", step3: "Generating verdict",
+    probableSource: "Likely source",
+    resetBtn: "↩ Analyze another product",
+    recentAnalyses: "Recent analyses",
+    noAnalysis: "No analysis yet",
+    footerText: "© 2025 DropScan — Indicative results · AI via",
+    footerFree: "(free, no key)",
+    errEnterLink: "Enter a product link.",
+    errSelectImg: "Select or paste an image.",
+    errAnalysis: "Analysis failed: {err} — Check your connection and try again.",
+    legit: "Legit", suspect: "Suspicious", dropship: "Dropshipping",
+    locale: "en-US", htmlLang: "en", dir: "ltr",
+    aiInstruction: "Answer in English."
+  },
+  es: {
+    eyebrow: "Detector de dropshipping",
+    heroTitle: "¿Este producto viene<br>de AliExpress?",
+    heroSub: "Enlace o imagen → veredicto instantáneo · funciona desde cualquier navegador",
+    tabLink: "🔗 Enlace", tabImg: "🖼️ Imagen",
+    urlPlaceholder: "https://tienda.com/producto…",
+    scanBtn: "Escanear",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Pegar una imagen (Ctrl+V)",
+    pasteHintHover: 'Copia y pega <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Suelta o haz clic",
+    analyzeImgBtn: "⚡ Analizar imagen",
+    scanningInProgress: "Analizando…",
+    step0: "Identificando el producto", step1: "Buscando en AliExpress / Temu",
+    step2: "Comparando precios e imágenes", step3: "Generando veredicto",
+    probableSource: "Fuente probable",
+    resetBtn: "↩ Analizar otro producto",
+    recentAnalyses: "Análisis recientes",
+    noAnalysis: "Sin análisis",
+    footerText: "© 2025 DropScan — Resultados indicativos · IA vía",
+    footerFree: "(gratis, sin clave)",
+    errEnterLink: "Introduce un enlace de producto.",
+    errSelectImg: "Selecciona o pega una imagen.",
+    errAnalysis: "Análisis fallido: {err} — Verifica tu conexión e inténtalo de nuevo.",
+    legit: "Legítimo", suspect: "Sospechoso", dropship: "Dropshipping",
+    locale: "es-ES", htmlLang: "es", dir: "ltr",
+    aiInstruction: "Responde en español."
+  },
+  de: {
+    eyebrow: "Dropshipping-Erkennung",
+    heroTitle: "Stammt dieses Produkt<br>von AliExpress?",
+    heroSub: "Link oder Bild → sofortiges Urteil · funktioniert in jedem Browser",
+    tabLink: "🔗 Link", tabImg: "🖼️ Bild",
+    urlPlaceholder: "https://shop.com/produkt…",
+    scanBtn: "Scannen",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Bild einfügen (Strg+V)",
+    pasteHintHover: 'Kopieren, dann <kbd class="kbd">Strg+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Ablegen oder klicken",
+    analyzeImgBtn: "⚡ Bild analysieren",
+    scanningInProgress: "Analyse läuft…",
+    step0: "Produkt wird identifiziert", step1: "Suche bei AliExpress / Temu",
+    step2: "Vergleich von Preisen & Bildern", step3: "Urteil wird erstellt",
+    probableSource: "Wahrscheinliche Quelle",
+    resetBtn: "↩ Weiteres Produkt analysieren",
+    recentAnalyses: "Letzte Analysen",
+    noAnalysis: "Keine Analyse",
+    footerText: "© 2025 DropScan — Indikative Ergebnisse · KI via",
+    footerFree: "(kostenlos, ohne Schlüssel)",
+    errEnterLink: "Geben Sie einen Produktlink ein.",
+    errSelectImg: "Wählen oder fügen Sie ein Bild ein.",
+    errAnalysis: "Analyse fehlgeschlagen: {err} — Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    legit: "Legitim", suspect: "Verdächtig", dropship: "Dropshipping",
+    locale: "de-DE", htmlLang: "de", dir: "ltr",
+    aiInstruction: "Antworte auf Deutsch."
+  },
+  it: {
+    eyebrow: "Rilevatore di dropshipping",
+    heroTitle: "Questo prodotto proviene<br>da AliExpress?",
+    heroSub: "Link o immagine → verdetto istantaneo · funziona da qualsiasi browser",
+    tabLink: "🔗 Link", tabImg: "🖼️ Immagine",
+    urlPlaceholder: "https://negozio.com/prodotto…",
+    scanBtn: "Scansiona",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Incolla un'immagine (Ctrl+V)",
+    pasteHintHover: 'Copia poi <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Trascina o clicca",
+    analyzeImgBtn: "⚡ Analizza immagine",
+    scanningInProgress: "Analisi in corso…",
+    step0: "Identificazione del prodotto", step1: "Ricerca su AliExpress / Temu",
+    step2: "Confronto prezzi e immagini", step3: "Generazione del verdetto",
+    probableSource: "Fonte probabile",
+    resetBtn: "↩ Analizza un altro prodotto",
+    recentAnalyses: "Analisi recenti",
+    noAnalysis: "Nessuna analisi",
+    footerText: "© 2025 DropScan — Risultati indicativi · IA via",
+    footerFree: "(gratis, senza chiave)",
+    errEnterLink: "Inserisci un link al prodotto.",
+    errSelectImg: "Seleziona o incolla un'immagine.",
+    errAnalysis: "Analisi non riuscita: {err} — Controlla la connessione e riprova.",
+    legit: "Legittimo", suspect: "Sospetto", dropship: "Dropshipping",
+    locale: "it-IT", htmlLang: "it", dir: "ltr",
+    aiInstruction: "Rispondi in italiano."
+  },
+  pt: {
+    eyebrow: "Detector de dropshipping",
+    heroTitle: "Este produto vem<br>do AliExpress?",
+    heroSub: "Link ou imagem → veredito instantâneo · funciona em qualquer navegador",
+    tabLink: "🔗 Link", tabImg: "🖼️ Imagem",
+    urlPlaceholder: "https://loja.com/produto…",
+    scanBtn: "Escanear",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Colar uma imagem (Ctrl+V)",
+    pasteHintHover: 'Copie e <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Solte ou clique",
+    analyzeImgBtn: "⚡ Analisar imagem",
+    scanningInProgress: "Analisando…",
+    step0: "Identificando o produto", step1: "Pesquisando no AliExpress / Temu",
+    step2: "Comparando preços e imagens", step3: "Gerando veredito",
+    probableSource: "Fonte provável",
+    resetBtn: "↩ Analisar outro produto",
+    recentAnalyses: "Análises recentes",
+    noAnalysis: "Nenhuma análise",
+    footerText: "© 2025 DropScan — Resultados indicativos · IA via",
+    footerFree: "(grátis, sem chave)",
+    errEnterLink: "Insira um link de produto.",
+    errSelectImg: "Selecione ou cole uma imagem.",
+    errAnalysis: "Falha na análise: {err} — Verifique sua conexão e tente novamente.",
+    legit: "Legítimo", suspect: "Suspeito", dropship: "Dropshipping",
+    locale: "pt-PT", htmlLang: "pt", dir: "ltr",
+    aiInstruction: "Responda em português."
+  },
+  nl: {
+    eyebrow: "Dropshipping-detector",
+    heroTitle: "Komt dit product<br>van AliExpress?",
+    heroSub: "Link of afbeelding → direct oordeel · werkt in elke browser",
+    tabLink: "🔗 Link", tabImg: "🖼️ Afbeelding",
+    urlPlaceholder: "https://winkel.com/product…",
+    scanBtn: "Scannen",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Plak een afbeelding (Ctrl+V)",
+    pasteHintHover: 'Kopieer en <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Sleep of klik",
+    analyzeImgBtn: "⚡ Afbeelding analyseren",
+    scanningInProgress: "Analyseren…",
+    step0: "Product identificeren", step1: "Zoeken op AliExpress / Temu",
+    step2: "Prijzen & afbeeldingen vergelijken", step3: "Oordeel genereren",
+    probableSource: "Waarschijnlijke bron",
+    resetBtn: "↩ Ander product analyseren",
+    recentAnalyses: "Recente analyses",
+    noAnalysis: "Geen analyse",
+    footerText: "© 2025 DropScan — Indicatieve resultaten · AI via",
+    footerFree: "(gratis, geen sleutel)",
+    errEnterLink: "Voer een productlink in.",
+    errSelectImg: "Selecteer of plak een afbeelding.",
+    errAnalysis: "Analyse mislukt: {err} — Controleer uw verbinding en probeer opnieuw.",
+    legit: "Legitiem", suspect: "Verdacht", dropship: "Dropshipping",
+    locale: "nl-NL", htmlLang: "nl", dir: "ltr",
+    aiInstruction: "Antwoord in het Nederlands."
+  },
+  ar: {
+    eyebrow: "كاشف الدروبشيبينغ",
+    heroTitle: "هل هذا المنتج<br>من AliExpress؟",
+    heroSub: "رابط أو صورة ← حكم فوري · يعمل من أي متصفح",
+    tabLink: "🔗 رابط", tabImg: "🖼️ صورة",
+    urlPlaceholder: "https://store.com/product…",
+    scanBtn: "فحص",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 الصق صورة (Ctrl+V)",
+    pasteHintHover: 'انسخ ثم <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "اسحب أو انقر",
+    analyzeImgBtn: "⚡ تحليل الصورة",
+    scanningInProgress: "جارٍ التحليل…",
+    step0: "تحديد المنتج", step1: "البحث في AliExpress / Temu",
+    step2: "مقارنة الأسعار والصور", step3: "إنشاء الحكم",
+    probableSource: "المصدر المحتمل",
+    resetBtn: "↩ تحليل منتج آخر",
+    recentAnalyses: "التحليلات الأخيرة",
+    noAnalysis: "لا توجد تحليلات",
+    footerText: "© 2025 DropScan — نتائج إرشادية · بالذكاء الاصطناعي عبر",
+    footerFree: "(مجاني، بدون مفتاح)",
+    errEnterLink: "أدخل رابط المنتج.",
+    errSelectImg: "اختر أو الصق صورة.",
+    errAnalysis: "فشل التحليل: {err} — تحقق من اتصالك وحاول مرة أخرى.",
+    legit: "شرعي", suspect: "مشبوه", dropship: "دروبشيبينغ",
+    locale: "ar-SA", htmlLang: "ar", dir: "rtl",
+    aiInstruction: "أجب باللغة العربية."
+  },
+  zh: {
+    eyebrow: "代发货检测器",
+    heroTitle: "这个产品来自<br>AliExpress 吗？",
+    heroSub: "链接或图片 → 即时判定 · 适用于任何浏览器",
+    tabLink: "🔗 链接", tabImg: "🖼️ 图片",
+    urlPlaceholder: "https://store.com/product…",
+    scanBtn: "扫描",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 粘贴图片 (Ctrl+V)",
+    pasteHintHover: '复制后 <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "拖放或点击",
+    analyzeImgBtn: "⚡ 分析图片",
+    scanningInProgress: "分析中…",
+    step0: "识别产品", step1: "搜索 AliExpress / Temu",
+    step2: "比较价格和图片", step3: "生成判定结果",
+    probableSource: "可能来源",
+    resetBtn: "↩ 分析另一个产品",
+    recentAnalyses: "最近的分析",
+    noAnalysis: "暂无分析",
+    footerText: "© 2025 DropScan — 仅供参考 · AI 技术由",
+    footerFree: "（免费，无需密钥）",
+    errEnterLink: "请输入产品链接。",
+    errSelectImg: "请选择或粘贴图片。",
+    errAnalysis: "分析失败：{err} — 请检查您的连接并重试。",
+    legit: "正规", suspect: "可疑", dropship: "代发货",
+    locale: "zh-CN", htmlLang: "zh", dir: "ltr",
+    aiInstruction: "请用中文回答。"
+  },
+  ja: {
+    eyebrow: "ドロップシッピング検出",
+    heroTitle: "この商品は<br>AliExpress 由来ですか？",
+    heroSub: "リンクまたは画像 → 即座に判定 · どのブラウザでも動作",
+    tabLink: "🔗 リンク", tabImg: "🖼️ 画像",
+    urlPlaceholder: "https://store.com/product…",
+    scanBtn: "スキャン",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 画像を貼り付け (Ctrl+V)",
+    pasteHintHover: 'コピーして <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "ドロップまたはクリック",
+    analyzeImgBtn: "⚡ 画像を分析",
+    scanningInProgress: "分析中…",
+    step0: "商品を識別中", step1: "AliExpress / Temu を検索中",
+    step2: "価格と画像を比較中", step3: "判定を生成中",
+    probableSource: "推定ソース",
+    resetBtn: "↩ 別の商品を分析",
+    recentAnalyses: "最近の分析",
+    noAnalysis: "分析履歴なし",
+    footerText: "© 2025 DropScan — 参考結果 · AI 提供：",
+    footerFree: "（無料、キー不要）",
+    errEnterLink: "商品リンクを入力してください。",
+    errSelectImg: "画像を選択または貼り付けてください。",
+    errAnalysis: "分析に失敗しました：{err} — 接続を確認して再試行してください。",
+    legit: "正規品", suspect: "疑わしい", dropship: "ドロップシッピング",
+    locale: "ja-JP", htmlLang: "ja", dir: "ltr",
+    aiInstruction: "日本語で答えてください。"
+  },
+  ru: {
+    eyebrow: "Детектор дропшиппинга",
+    heroTitle: "Этот товар<br>с AliExpress?",
+    heroSub: "Ссылка или изображение → мгновенный вердикт · работает в любом браузере",
+    tabLink: "🔗 Ссылка", tabImg: "🖼️ Изображение",
+    urlPlaceholder: "https://store.com/product…",
+    scanBtn: "Сканировать",
+    urlHint: "Shopify, TikTok Shop, Amazon, Instagram…",
+    pasteHint: "📋 Вставить изображение (Ctrl+V)",
+    pasteHintHover: 'Скопируйте, затем <kbd class="kbd">Ctrl+V</kbd> / <kbd class="kbd">⌘+V</kbd>',
+    dropLabel: "Перетащите или нажмите",
+    analyzeImgBtn: "⚡ Анализировать изображение",
+    scanningInProgress: "Анализ…",
+    step0: "Идентификация товара", step1: "Поиск на AliExpress / Temu",
+    step2: "Сравнение цен и изображений", step3: "Формирование вердикта",
+    probableSource: "Вероятный источник",
+    resetBtn: "↩ Проверить другой товар",
+    recentAnalyses: "Недавние анализы",
+    noAnalysis: "Нет анализов",
+    footerText: "© 2025 DropScan — Ориентировочные результаты · ИИ через",
+    footerFree: "(бесплатно, без ключа)",
+    errEnterLink: "Введите ссылку на товар.",
+    errSelectImg: "Выберите или вставьте изображение.",
+    errAnalysis: "Ошибка анализа: {err} — Проверьте подключение и повторите попытку.",
+    legit: "Легитимно", suspect: "Подозрительно", dropship: "Дропшиппинг",
+    locale: "ru-RU", htmlLang: "ru", dir: "ltr",
+    aiInstruction: "Отвечай на русском языке."
   }
+};
 
-  function updateUI() {
-    $('eyebrowText').textContent = t('eyebrow');
-    $('titleText').textContent = t('title');
-    $('toggleForm').textContent = t('addBtn');
-    $('formError').textContent = t('formError');
-    $('formTitle').textContent = editingId ? t('editSub') : t('newSub');
-    $('listLabel').textContent = t('yourSubs');
-    $('emptyState').innerHTML = t('empty').replace('\n', '<br>');
-    
-    document.querySelector('label[for="fName"]').textContent = t('name');
-    document.querySelector('label[for="fPrice"]').textContent = t('price');
-    document.querySelector('label[for="fFreq"]').textContent = t('frequency');
-    document.querySelector('label[for="fDate"]').textContent = t('nextDate');
-    
-    document.querySelector('option[value="mensuel"]').textContent = t('monthly');
-    document.querySelector('option[value="annuel"]').textContent = t('annual');
-    document.querySelector('option[value="trimestriel"]').textContent = t('quarterly');
-    document.querySelector('option[value="hebdomadaire"]').textContent = t('weekly');
-    
-    $('saveBtn').textContent = t('save');
-    $('cancelBtn').textContent = t('cancel');
-    
-    document.querySelectorAll('.total-card .k')[0].textContent = t('perMonth');
-    document.querySelectorAll('.total-card .k')[1].textContent = t('perYear');
-    
-    document.querySelector('.quickadd-label').textContent = t('quickAdd');
-    document.querySelector('.savings-title').textContent = t('savings');
-    buildQuickChips();
-    render();
+// Détection de la langue de l'appareil (avec repli sur le français)
+function detectDeviceLang() {
+  const saved = localStorage.getItem('ds-lang');
+  if (saved && I18N[saved]) return saved;
+  const navLangs = navigator.languages || [navigator.language || 'fr'];
+  for (const l of navLangs) {
+    const code = l.slice(0,2).toLowerCase();
+    if (I18N[code]) return code;
   }
+  return 'fr';
+}
 
-  function updateLangButton() {
-    const codeMap = { en: 'US', gb: 'UK' };
-    $('langCode').textContent = codeMap[currentLang] || currentLang.toUpperCase();
-    document.querySelectorAll('.lang-opt').forEach(opt => {
-      opt.classList.toggle('active', opt.dataset.lang === currentLang);
-    });
-  }
+let currentLang = detectDeviceLang();
 
-  const PRESETS_BY_CURRENCY = {
-    EUR: [
-      {name:'Netflix', price:13.49, frequency:'mensuel', cancelUrl:'https://www.netflix.com/cancelplan'},
-      {name:'Spotify', price:11.99, frequency:'mensuel', cancelUrl:'https://www.spotify.com/fr/account/subscription/cancel/'},
-      {name:'Deezer', price:10.99, frequency:'mensuel', cancelUrl:'https://www.deezer.com/fr/account/offers'},
-      {name:'Disney+', price:9.99, frequency:'mensuel', cancelUrl:'https://www.disneyplus.com/fr-fr/account'},
-      {name:'Amazon Prime', price:69, frequency:'annuel', cancelUrl:'https://www.amazon.fr/mc/pipelines/cancellation'},
-      {name:'YouTube Premium', price:13.99, frequency:'mensuel', cancelUrl:'https://myaccount.google.com/payments-and-subscriptions'},
-      {name:'Twitch', price:13.99, frequency:'mensuel', cancelUrl:'https://www.twitch.tv/settings/subscriptions'},
-      {name:'Apple Music', price:10.99, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'ChatGPT+', price:20, frequency:'mensuel', cancelUrl:'https://chat.openai.com/billing'},
-      {name:'iCloud+', price:2.99, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'Adobe CC', price:59.99, frequency:'mensuel', cancelUrl:'https://account.adobe.com/plans'},
-      {name:'Notion', price:10, frequency:'mensuel', cancelUrl:'https://www.notion.so/profile/billing'},
-      {name:'Figma', price:12, frequency:'mensuel', cancelUrl:'https://www.figma.com/settings'},
-      {name:'Dropbox', price:11.99, frequency:'mensuel', cancelUrl:'https://www.dropbox.com/account/plan'},
-      {name:'1Password', price:4.99, frequency:'mensuel', cancelUrl:'https://my.1password.com/profile'},
-    ],
-    USD: [
-      {name:'Netflix', price:15.49, frequency:'mensuel', cancelUrl:'https://www.netflix.com/cancelplan'},
-      {name:'Spotify', price:11.99, frequency:'mensuel', cancelUrl:'https://www.spotify.com/us/account/subscription/cancel/'},
-      {name:'Deezer', price:10.99, frequency:'mensuel', cancelUrl:'https://www.deezer.com/en/account/offers'},
-      {name:'Disney+', price:13.99, frequency:'mensuel', cancelUrl:'https://www.disneyplus.com/account'},
-      {name:'Amazon Prime', price:139, frequency:'annuel', cancelUrl:'https://www.amazon.com/mc/pipelines/cancellation'},
-      {name:'YouTube Premium', price:13.99, frequency:'mensuel', cancelUrl:'https://myaccount.google.com/payments-and-subscriptions'},
-      {name:'Twitch', price:14.99, frequency:'mensuel', cancelUrl:'https://www.twitch.tv/settings/subscriptions'},
-      {name:'Apple Music', price:10.99, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'ChatGPT+', price:20, frequency:'mensuel', cancelUrl:'https://chat.openai.com/billing'},
-      {name:'iCloud+', price:2.99, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'Adobe CC', price:59.99, frequency:'mensuel', cancelUrl:'https://account.adobe.com/plans'},
-      {name:'Notion', price:10, frequency:'mensuel', cancelUrl:'https://www.notion.so/profile/billing'},
-      {name:'Figma', price:15, frequency:'mensuel', cancelUrl:'https://www.figma.com/settings'},
-      {name:'Dropbox', price:11.99, frequency:'mensuel', cancelUrl:'https://www.dropbox.com/account/plan'},
-      {name:'1Password', price:4.99, frequency:'mensuel', cancelUrl:'https://my.1password.com/profile'},
-    ],
-    GBP: [
-      {name:'Netflix', price:4.99, frequency:'mensuel', cancelUrl:'https://www.netflix.com/cancelplan'},
-      {name:'Spotify', price:11.99, frequency:'mensuel', cancelUrl:'https://www.spotify.com/uk/account/subscription/cancel/'},
-      {name:'Deezer', price:10.99, frequency:'mensuel', cancelUrl:'https://www.deezer.com/en/account/offers'},
-      {name:'Disney+', price:4.99, frequency:'mensuel', cancelUrl:'https://www.disneyplus.com/en-gb/account'},
-      {name:'Amazon Prime', price:95, frequency:'annuel', cancelUrl:'https://www.amazon.co.uk/mc/pipelines/cancellation'},
-      {name:'YouTube Premium', price:13.99, frequency:'mensuel', cancelUrl:'https://myaccount.google.com/payments-and-subscriptions'},
-      {name:'Twitch', price:8.99, frequency:'mensuel', cancelUrl:'https://www.twitch.tv/settings/subscriptions'},
-      {name:'Apple Music', price:10.99, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'ChatGPT+', price:20, frequency:'mensuel', cancelUrl:'https://chat.openai.com/billing'},
-      {name:'iCloud+', price:0.99, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'Adobe CC', price:54.98, frequency:'mensuel', cancelUrl:'https://account.adobe.com/plans'},
-      {name:'Notion', price:10, frequency:'mensuel', cancelUrl:'https://www.notion.so/profile/billing'},
-      {name:'Figma', price:12, frequency:'mensuel', cancelUrl:'https://www.figma.com/settings'},
-      {name:'Dropbox', price:9.99, frequency:'mensuel', cancelUrl:'https://www.dropbox.com/account/plan'},
-      {name:'1Password', price:4.99, frequency:'mensuel', cancelUrl:'https://my.1password.com/profile'},
-    ],
-    JPY: [
-      {name:'Netflix', price:1590, frequency:'mensuel', cancelUrl:'https://www.netflix.com/cancelplan'},
-      {name:'Spotify', price:980, frequency:'mensuel', cancelUrl:'https://www.spotify.com/jp/account/subscription/cancel/'},
-      {name:'Deezer', price:1080, frequency:'mensuel', cancelUrl:'https://www.deezer.com/ja/account/offers'},
-      {name:'Disney+', price:990, frequency:'mensuel', cancelUrl:'https://www.disneyplus.com/ja-jp/account'},
-      {name:'Amazon Prime', price:600, frequency:'mensuel', cancelUrl:'https://www.amazon.co.jp/mc/pipelines/cancellation'},
-      {name:'YouTube Premium', price:1280, frequency:'mensuel', cancelUrl:'https://myaccount.google.com/payments-and-subscriptions'},
-      {name:'Apple Music', price:1080, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'ChatGPT+', price:3000, frequency:'mensuel', cancelUrl:'https://chat.openai.com/billing'},
-      {name:'iCloud+', price:130, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'Adobe CC', price:6480, frequency:'mensuel', cancelUrl:'https://account.adobe.com/plans'},
-      {name:'Notion', price:1650, frequency:'mensuel', cancelUrl:'https://www.notion.so/profile/billing'},
-      {name:'Dropbox', price:1200, frequency:'mensuel', cancelUrl:'https://www.dropbox.com/account/plan'},
-      {name:'1Password', price:400, frequency:'mensuel', cancelUrl:'https://my.1password.com/profile'},
-    ],
-    CNY: [
-      {name:'Netflix', price:108, frequency:'mensuel', cancelUrl:'https://www.netflix.com/cancelplan'},
-      {name:'Spotify', price:12, frequency:'mensuel', cancelUrl:'https://www.spotify.com/cn/account/subscription/cancel/'},
-      {name:'Deezer', price:72, frequency:'mensuel', cancelUrl:'https://www.deezer.com/zh/account/offers'},
-      {name:'Disney+', price:63, frequency:'mensuel', cancelUrl:'https://www.disneyplus.com/account'},
-      {name:'YouTube Premium', price:107, frequency:'mensuel', cancelUrl:'https://myaccount.google.com/payments-and-subscriptions'},
-      {name:'Apple Music', price:11, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'ChatGPT+', price:139, frequency:'mensuel', cancelUrl:'https://chat.openai.com/billing'},
-      {name:'iCloud+', price:6, frequency:'mensuel', cancelUrl:'https://appleid.apple.com/account/manage'},
-      {name:'Adobe CC', price:388, frequency:'mensuel', cancelUrl:'https://account.adobe.com/plans'},
-      {name:'Notion', price:72, frequency:'mensuel', cancelUrl:'https://www.notion.so/profile/billing'},
-      {name:'Dropbox', price:79, frequency:'mensuel', cancelUrl:'https://www.dropbox.com/account/plan'},
-    ],
-  };
-  const getPresets = () => PRESETS_BY_CURRENCY[getCurrency()] || PRESETS_BY_CURRENCY.EUR;
+function t(key) { return (I18N[currentLang] && I18N[currentLang][key]) || I18N.fr[key] || key; }
 
-  // Language
-  $('langBtn').addEventListener('click', ()=>{
-    const menu = $('langMenu');
-    const isOpen = menu.classList.contains('show');
-    menu.classList.toggle('show', !isOpen);
-    $('langBtn').setAttribute('aria-expanded', !isOpen);
+function applyTranslations() {
+  const dict = I18N[currentLang] || I18N.fr;
+  document.documentElement.lang = dict.htmlLang;
+  document.documentElement.dir = dict.dir;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.innerHTML = dict[key];
   });
-
-  document.querySelectorAll('.lang-opt').forEach(opt => {
-    opt.addEventListener('click', ()=>{
-      setLanguage(opt.dataset.lang);
-      $('langMenu').classList.remove('show');
-      $('langBtn').setAttribute('aria-expanded', false);
-    });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key] !== undefined) el.placeholder = dict[key];
   });
-
-  document.addEventListener('click', (e)=>{
-    if(!$('langSwitch').contains(e.target)){
-      $('langMenu').classList.remove('show');
-      $('langBtn').setAttribute('aria-expanded', false);
-    }
-  });
-
-  function computeNextDate(baseDateStr, frequency){
-    const base = new Date(baseDateStr + 'T00:00:00');
-    const today = todayMid();
-    let d = new Date(base);
-    if(isNaN(d.getTime())) return today;
-    if(d >= today) return d;
-    if(frequency === 'hebdomadaire'){
-      const diffDays = Math.ceil((today - d) / 86400000);
-      const weeks = Math.ceil(diffDays / 7);
-      d.setDate(d.getDate() + weeks * 7);
-      return d;
-    }
-    const stepMonths = {mensuel:1, trimestriel:3, annuel:12}[frequency] || 1;
-    let guard = 0;
-    while(d < today && guard < 600){
-      d.setMonth(d.getMonth() + stepMonths);
-      guard++;
-    }
-    return d;
+  const sel = document.getElementById('lang-select');
+  if (sel) sel.value = currentLang;
+  // Met à jour le hint de collage (état par défaut, hors survol)
+  const ph = document.getElementById('paste-hint');
+  if (ph) ph.textContent = dict.pasteHint;
+  // Recalcule le score-label si un résultat est déjà affiché
+  const sl = document.getElementById('score-label');
+  if (sl && sl.dataset.score !== undefined) {
+    const score = Number(sl.dataset.score);
+    sl.textContent = score < 31 ? dict.legit : score < 70 ? dict.suspect : dict.dropship;
   }
+  // Re-render l'historique pour mettre à jour le timestamp/formats si besoin
+  renderHistory();
+}
 
-  function monthlyEquivalent(item){
-    switch(item.frequency){
-      case 'hebdomadaire': return item.price * 52 / 12;
-      case 'trimestriel': return item.price / 3;
-      case 'annuel': return item.price / 12;
-      default: return item.price;
-    }
+document.getElementById('lang-select').addEventListener('change', function() {
+  currentLang = this.value;
+  localStorage.setItem('ds-lang', currentLang);
+  applyTranslations();
+});
+
+
+// ── Prompt système (généré dynamiquement selon la langue) ──
+function getSystemPrompt() {
+  return `Tu es un expert en détection de dropshipping. Analyse le produit fourni. ${t('aiInstruction')} RÉPONDS UNIQUEMENT EN JSON VALIDE, sans backticks, sans markdown, sans texte avant ou après :
+{"productName":"Nom précis","dropshippingScore":87,"summary":"1 phrase.","signals":[{"icon":"⚠️","title":"Titre","detail":"Explication"}],"sources":[{"platform":"AliExpress","icon":"🛒","description":"~X€","searchUrl":"https://www.aliexpress.com/wholesale?SearchText=mots+cles"}]}
+dropshippingScore = 0 à 100. 0-30 légitime, 31-69 suspect, 70-100 dropshipping.
+Indices : photos fond blanc génériques, présence AliExpress/Temu/DHgate, marques inconnues, prix gonflés, gadgets viraux, emballages sans identité.
+Si score < 30 : signals = raisons de légitimité, sources = [].
+IMPORTANT : les valeurs textuelles du JSON (productName, summary, signals[].title, signals[].detail, sources[].description) doivent être rédigées dans la langue demandée ci-dessus. Les clés JSON et les URLs restent inchangées.`;
+}
+
+// ── Modèles Pollinations (cascade) ──
+// GET https://text.pollinations.ai/{prompt}?model=X&system=Y&json=true
+// CORS ouvert, fonctionne depuis file:// et tout navigateur, sans clé API
+const MODELS = ['openai', 'mistral', 'deepseek'];
+
+let imgB64 = null, imgMime = null, analysisHistory = [];
+let scanTimer = null;
+
+// ── Appel API Pollinations (GET, sans clé) ──
+async function callPollinations(userPrompt, model) {
+  const url = 'https://text.pollinations.ai/' +
+    encodeURIComponent(userPrompt) +
+    '?model=' + model +
+    '&system=' + encodeURIComponent(getSystemPrompt()) +
+    '&json=true' +
+    '&seed=' + Math.floor(Math.random() * 9999);
+
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const text = await r.text();
+  if (!text || text.trim() === '') throw new Error('Réponse vide');
+  return text;
+}
+
+// ── Steps animation ──
+function startSteps() {
+  const steps = ['st0','st1','st2','st3'];
+  let i = 0;
+  steps.forEach(id => { const el = document.getElementById(id); el.className = 's-step'; });
+  function tick() {
+    if (i > 0) { const prev = document.getElementById(steps[i-1]); prev.classList.remove('active'); prev.classList.add('done'); }
+    if (i < steps.length) { document.getElementById(steps[i]).classList.add('active'); i++; scanTimer = setTimeout(tick, 900 + Math.random()*400); }
   }
+  tick();
+}
+function stopSteps() {
+  clearTimeout(scanTimer);
+  ['st0','st1','st2','st3'].forEach(id => { document.getElementById(id).classList.remove('active'); document.getElementById(id).classList.add('done'); });
+}
 
-  function freqLabel(f){
-    const labels = {mensuel: t('freqMonth'), annuel: t('freqYear'), trimestriel: t('freqQuarter'), hebdomadaire: t('freqWeek')};
-    return labels[f] || '';
+// ── Tabs ──
+function switchTab(t) {
+  document.querySelectorAll('.ds-tab').forEach((b,i) => b.classList.toggle('active', (t==='url'&&i===0)||(t==='img'&&i===1)));
+  document.getElementById('tab-url').style.display = t==='url' ? 'block' : 'none';
+  document.getElementById('tab-img').style.display = t==='img' ? 'flex' : 'none';
+  hideErr();
+}
+
+// ── Phase ──
+function showPhase(p) {
+  ['idle','scanning','result'].forEach(id => document.getElementById('phase-'+id).classList.remove('active'));
+  document.getElementById('phase-'+p).classList.add('active');
+}
+
+// ── Errors ──
+function showErr(msg) { const e = document.getElementById('err-box'); e.textContent = '⚠️ ' + msg; e.style.display = 'block'; }
+function hideErr() { document.getElementById('err-box').style.display = 'none'; }
+
+// ── Image ──
+document.getElementById('file-input').addEventListener('change', function() { handleFile(this.files[0]); });
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const parts = ev.target.result.split(',');
+    imgB64 = parts[1]; imgMime = file.type || 'image/jpeg';
+    document.getElementById('preview-img').src = ev.target.result;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('drop-zone').style.display = 'none';
+    document.getElementById('analyze-img-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+function clearImg() {
+  imgB64 = null; imgMime = null;
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('drop-zone').style.display = 'block';
+  document.getElementById('analyze-img-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+}
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--red)'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor = ''; handleFile(e.dataTransfer.files[0]); });
+
+window.addEventListener('paste', e => {
+  for (const item of (e.clipboardData?.items || [])) {
+    if (item.type.startsWith('image/')) { switchTab('img'); handleFile(item.getAsFile()); break; }
   }
+});
+const ph = document.getElementById('paste-hint');
+ph.addEventListener('mouseenter', () => ph.innerHTML = t('pasteHintHover'));
+ph.addEventListener('mouseleave', () => ph.textContent = t('pasteHint'));
 
-  // ── IndexedDB storage ──────────────────────────────────────────
-  const DB_NAME = 'suivi-abonnements';
-  const DB_VERSION = 1;
-  const STORE = 'data';
-  let db = null;
+document.getElementById('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') goUrl(); });
 
-  function openDB(){
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = e => {
-        e.target.result.createObjectStore(STORE);
-      };
-      req.onsuccess = e => resolve(e.target.result);
-      req.onerror   = e => reject(e.target.error);
-    });
-  }
+// ── Go URL ──
+function goUrl() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) { showErr(t('errEnterLink')); return; }
+  hideErr();
+  const prompt = "Analyse ce produit e-commerce : " + url + ". Génère des URLs de recherche AliExpress/Temu si c'est du dropshipping.";
+  runAnalysis(prompt);
+}
 
-  async function dbGet(key){
-    if(!db) db = await openDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).get(key);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror   = () => reject(req.error);
-    });
-  }
+// ── Go Image ──
+function goImg() {
+  if (!imgB64) { showErr(t('errSelectImg')); return; }
+  hideErr();
+  // Pour l'image, on décrit la démarche (Pollinations text ne supporte pas vision en GET simple)
+  // On envoie l'URL data en paramètre image si le modèle le supporte, sinon on analyse à partir de la description demandée
+  const prompt = "Identifie ce produit à partir de son image encodée en base64 (data:" + imgMime + ";base64, premiers 100 chars: " + imgB64.substring(0,100) + "...) et détermine s'il est vendu en dropshipping. Génère des URLs de recherche AliExpress/Temu.";
+  runAnalysis(prompt);
+}
 
-  async function dbSet(key, value){
-    if(!db) db = await openDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readwrite');
-      const req = tx.objectStore(STORE).put(value, key);
-      req.onsuccess = () => resolve();
-      req.onerror   = () => reject(req.error);
-    });
-  }
+// ── Analyse avec cascade de modèles ──
+async function runAnalysis(userPrompt) {
+  showPhase('scanning');
+  startSteps();
+  let lastErr = '';
 
-  async function loadState(){
-    try{
-      const data = await dbGet('subscriptions-data');
-      if(data && Array.isArray(data.items)) state = data;
-    }catch(e){
-      // Fallback: try legacy localStorage
-      try{
-        const raw = localStorage.getItem('subscriptions-data');
-        if(raw){
-          const parsed = JSON.parse(raw);
-          if(parsed && Array.isArray(parsed.items)){
-            state = parsed;
-            await saveState(); // migrate to IndexedDB
-            localStorage.removeItem('subscriptions-data');
-          }
-        }
-      }catch(e2){}
-    }
-    render();
-  }
+  for (const model of MODELS) {
+    try {
+      const raw = await callPollinations(userPrompt, model);
+      // Extraire le JSON même si du texte l'entoure
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Pas de JSON dans la réponse');
+      const parsed = JSON.parse(match[0]);
+      if (typeof parsed.dropshippingScore === 'undefined') throw new Error('JSON incomplet');
 
-  async function saveState(){
-    try{
-      await dbSet('subscriptions-data', state);
-    }catch(e){
-      showToast(t('saveErrorFull'));
-    }
-  }
-
-  function showToast(msg){
-    const toast = $('toast');
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(()=> toast.classList.remove('show'), 2200);
-  }
-
-  function buildSwatches(){
-    const wrap = $('swatches');
-    wrap.innerHTML = '';
-    SWATCH_COLORS.forEach(c=>{
-      const s = document.createElement('div');
-      s.className = 'swatch' + (c === pickedColor ? ' active' : '');
-      s.style.background = c;
-      s.addEventListener('click', ()=>{ 
-        pickedColor = c; 
-        buildSwatches(); 
-      });
-      wrap.appendChild(s);
-    });
-  }
-
-  function buildQuickChips(){
-    const wrap = $('quickChips');
-    wrap.innerHTML = '';
-    getPresets().forEach(p=>{
-      const c = document.createElement('div');
-      c.className = 'chip';
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'chip-name';
-      nameEl.textContent = p.name;
-      nameEl.addEventListener('click', ()=>{
-        openForm(null);
-        $('fName').value = p.name;
-        $('fPrice').value = p.price;
-        $('fFreq').value = p.frequency;
-        $('fDate').value = todayISO();
-      });
-
-      c.appendChild(nameEl);
-
-      if(p.cancelUrl){
-        const stopEl = document.createElement('button');
-        stopEl.className = 'chip-stop';
-        stopEl.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg> Stop`;
-        stopEl.style.display = 'none';
-        c.appendChild(stopEl);
-      }
-
-      wrap.appendChild(c);
-    });
-  }
-
-  function openForm(item){
-    editingId = item ? item.id : null;
-    $('formTitle').textContent = item ? t('editSub') : t('newSub');
-    $('fName').value = item ? item.name : '';
-    $('fPrice').value = item ? item.price : '';
-    $('fFreq').value = item ? item.frequency : 'mensuel';
-    $('fDate').value = item ? item.nextDate : todayISO();
-    pickedColor = item ? item.color : SWATCH_COLORS[state.items.length % SWATCH_COLORS.length];
-    buildSwatches();
-    $('formError').classList.remove('show');
-    $('formCard').classList.add('show');
-    $('toggleForm').style.display = 'none';
-    $('fName').focus();
-  }
-
-  function closeForm(){
-    $('formCard').classList.remove('show');
-    $('toggleForm').style.display = 'block';
-    editingId = null;
-  }
-
-  $('toggleForm').addEventListener('click', ()=> openForm(null));
-  $('cancelBtn').addEventListener('click', closeForm);
-
-  $('saveBtn').addEventListener('click', ()=>{
-    const name = $('fName').value.trim();
-    const price = parseFloat($('fPrice').value);
-    const frequency = $('fFreq').value;
-    const nextDate = $('fDate').value;
-
-    if(!name || isNaN(price) || price < 0 || !nextDate){
-      $('formError').classList.add('show');
+      stopSteps();
+      await new Promise(r => setTimeout(r, 300));
+      showResult(parsed);
+      addToHistory(parsed);
       return;
+    } catch(e) {
+      lastErr = e.message || String(e);
+      console.warn('Modèle', model, 'échoué:', lastErr);
     }
-    $('formError').classList.remove('show');
-
-    if(editingId){
-      const idx = state.items.findIndex(i => i.id === editingId);
-      if(idx > -1){
-        state.items[idx] = { ...state.items[idx], name, price, frequency, nextDate, color: pickedColor };
-      }
-    } else {
-      state.items.push({
-        id: 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-        name, price, frequency, nextDate, color: pickedColor
-      });
-    }
-
-    saveState();
-    closeForm();
-    render();
-  });
-
-  function deleteItem(id){
-    if(!confirm(t('deleteConfirm'))) return;
-    state.items = state.items.filter(i => i.id !== id);
-    saveState();
-    render();
   }
 
-  function render(){
-    const list = $('list');
-    const empty = $('emptyState');
-    const listLabel = $('listLabel');
-    const savingsSection = $('savingsSection');
-    const savingsList = $('savingsList');
-    list.innerHTML = '';
-    savingsList.innerHTML = '';
+  stopSteps();
+  showPhase('idle');
+  showErr(t('errAnalysis').replace('{err}', lastErr));
+}
 
-    if(state.items.length === 0){
-      empty.style.display = 'block';
-      listLabel.style.display = 'none';
-      $('hero').style.display = 'none';
-      savingsSection.style.display = 'none';
-      $('totalMonth').textContent = fmtMoney(0);
-      $('totalYear').textContent = fmtMoney(0);
-      return;
-    }
+// ── Affichage du résultat ──
+function showResult(r) {
+  const score = r.dropshippingScore ?? 0;
+  const color = score < 31 ? '#30d158' : score < 70 ? '#f97316' : '#ef4444';
+  const label = score < 31 ? t('legit') : score < 70 ? t('suspect') : t('dropship');
+  document.getElementById('product-name').textContent = r.productName || '';
+  document.getElementById('product-summary').textContent = r.summary || '';
+  const slEl = document.getElementById('score-label');
+  slEl.textContent = label;
+  slEl.style.color = color;
+  slEl.dataset.score = score;
+  animateRing(score, color);
 
-    empty.style.display = 'none';
-    listLabel.style.display = 'block';
-
-    const enriched = state.items.map(item => {
-      const next = computeNextDate(item.nextDate, item.frequency);
-      const daysUntil = Math.round((next - todayMid()) / 86400000);
-      return { ...item, next, daysUntil };
-    }).sort((a,b)=> a.daysUntil - b.daysUntil);
-
-    const totalMonthly = state.items.reduce((s,i)=> s + monthlyEquivalent(i), 0);
-    $('totalMonth').textContent = fmtMoney(totalMonthly);
-    $('totalYear').textContent = fmtMoney(totalMonthly * 12);
-
-    const top = enriched[0];
-    $('hero').style.display = 'flex';
-    $('heroName').textContent = top.name;
-    $('heroPrice').textContent = fmtMoney(top.price) + ' ' + freqLabel(top.frequency);
-    $('heroCounter').textContent = top.daysUntil <= 0 ? "0" : top.daysUntil;
-
-    if(state.items.length > 2){
-      const sorted = [...enriched].sort((a,b)=> monthlyEquivalent(b) - monthlyEquivalent(a));
-      sorted.slice(0,3).forEach(item=>{
-        const monthlyAmount = monthlyEquivalent(item);
-        const yearlyAmount = monthlyAmount * 12;
-        const li = document.createElement('div');
-        li.className = 'saving-item';
-        li.innerHTML = `
-          <div class="saving-name">${escapeHtml(item.name)}</div>
-          <div style="display:flex;align-items:center;">
-            <div class="saving-amount">${fmtMoney(yearlyAmount)}/an</div>
-            <button class="saving-btn" data-id="${item.id}">✕</button>
-          </div>
-        `;
-        li.querySelector('.saving-btn').addEventListener('click', ()=> deleteItem(item.id));
-        savingsList.appendChild(li);
-      });
-      savingsSection.style.display = 'block';
-    } else {
-      savingsSection.style.display = 'none';
-    }
-
-    enriched.forEach(item=>{
-      const row = document.createElement('div');
-      row.className = 'sub-row';
-      row.style.borderLeftColor = item.color || SWATCH_COLORS[0];
-
-      const tier = item.daysUntil <= 3 ? 'urgent' : item.daysUntil <= 7 ? 'soon' : 'safe';
-      const badgeText = item.daysUntil <= 0 ? t('today') : item.daysUntil === 1 ? t('tomorrow') : t('inDays') + ' ' + item.daysUntil + t('days');
-
-      // Find cancel URL for this item across all currencies
-      const allPresets = Object.values(PRESETS_BY_CURRENCY).flat();
-      const preset = allPresets.find(p => p.name.toLowerCase() === item.name.toLowerCase());
-      const cancelUrl = preset?.cancelUrl || null;
-
-      const stopBtnHtml = cancelUrl ? `
-        <button class="icon-btn stop-btn" data-act="stop" aria-label="Stopper l'abonnement" title="Stopper l'abonnement" style="color:var(--accent-3);display:flex;align-items:center;gap:4px;font-size:10px;font-family:'Geist Mono',monospace;white-space:nowrap;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
-          Stopper
-        </button>` : '';
-
-      const reminderBtnHtml = `
-        <button class="icon-btn reminder-btn" data-act="remind" title="Ajouter un rappel">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </button>`;
-
-      row.innerHTML = `
-        <div class="sub-main">
-          <div class="sub-name">${escapeHtml(item.name)}</div>
-          <div class="sub-meta">${fmtMoney(item.price)} ${freqLabel(item.frequency)}</div>
-        </div>
-        <div class="sub-right">
-          <span class="badge ${tier}">${badgeText}</span>
-          <span class="sub-date">${fmtDate(item.next)}</span>
-        </div>
-        <div class="sub-actions">
-          <button class="icon-btn" data-act="edit" aria-label="${t('tooltipEdit')}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          </button>
-          <button class="icon-btn" data-act="delete" aria-label="${t('tooltipDelete')}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
-          </button>
-          ${reminderBtnHtml}
-          ${stopBtnHtml}
-        </div>
-      `;
-      row.querySelector('[data-act="edit"]').addEventListener('click', ()=> openForm(item));
-      row.querySelector('[data-act="delete"]').addEventListener('click', ()=> deleteItem(item.id));
-      if(cancelUrl) row.querySelector('[data-act="stop"]').addEventListener('click', ()=> window.open(cancelUrl, '_blank'));
-      row.querySelector('[data-act="remind"]').addEventListener('click', ()=> downloadReminder(item));
-      list.appendChild(row);
+  const srcWrap = document.getElementById('sources-wrap');
+  const srcSec = document.getElementById('sources-section');
+  srcWrap.innerHTML = '';
+  if (r.sources?.length) {
+    srcSec.style.display = 'block';
+    r.sources.forEach(src => {
+      const a = document.createElement('a');
+      a.href = src.searchUrl || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'source-link';
+      a.innerHTML = '<span class="src-icon">' + (src.icon||'🛒') + '</span><div class="src-info"><div class="src-name">' + src.platform + '</div><div class="src-desc">' + src.description + '</div></div><span class="src-arrow">↗</span>';
+      srcWrap.appendChild(a);
     });
+  } else srcSec.style.display = 'none';
+
+  const sigWrap = document.getElementById('signals-wrap');
+  const sigSec = document.getElementById('signals-section');
+  sigWrap.innerHTML = '';
+  if (r.signals?.length) {
+    sigSec.style.display = 'block';
+    r.signals.forEach(sig => {
+      const d = document.createElement('div'); d.className = 'signal-row';
+      d.innerHTML = '<span class="sig-icon">' + (sig.icon||'•') + '</span><span class="sig-title">' + sig.title + ' —</span><span class="sig-detail">' + sig.detail + '</span>';
+      sigWrap.appendChild(d);
+    });
+  } else sigSec.style.display = 'none';
+
+  showPhase('result');
+}
+
+// ── Animation ring ──
+function animateRing(score, color) {
+  const circ = 2 * Math.PI * 78;
+  const prog = document.getElementById('score-progress');
+  const num = document.getElementById('score-number');
+  prog.style.stroke = color;
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const p = Math.min((ts - start) / 1100, 1);
+    const cur = Math.round(score * (1 - Math.pow(1 - p, 3)));
+    num.textContent = cur;
+    prog.setAttribute('stroke-dashoffset', circ - (cur / 100) * circ);
+    if (p < 1) requestAnimationFrame(step);
   }
+  requestAnimationFrame(step);
+}
 
-  function downloadReminder(item){
-    const pad = n => String(n).padStart(2,'0');
-    const toIcsDate = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+// ── Mini ring (historique) ──
+function miniRingSVG(score) {
+  const R = 14, circ = 2 * Math.PI * R;
+  const offset = circ - (score / 100) * circ;
+  const color = score < 31 ? '#30d158' : score < 70 ? '#f97316' : '#ef4444';
+  return '<svg width="36" height="36" viewBox="0 0 36 36" style="flex-shrink:0"><circle cx="18" cy="18" r="' + R + '" fill="none" stroke="#1a1a24" stroke-width="2.5"/><circle cx="18" cy="18" r="' + R + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="' + offset.toFixed(2) + '" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="22" text-anchor="middle" fill="' + color + '" font-size="9" font-weight="600" font-family="Inter,system-ui,sans-serif">' + score + '</text></svg>';
+}
 
-    const payDate = new Date(item.nextDate);
-    const remindDate = new Date(payDate);
-    remindDate.setDate(remindDate.getDate() - 2);
+// ── Historique ──
+function addToHistory(result) {
+  const time = new Date().toLocaleTimeString((I18N[currentLang]||I18N.fr).locale, { hour:'2-digit', minute:'2-digit' });
+  analysisHistory.unshift({ productName: result.productName, score: result.dropshippingScore, time, result });
+  if (analysisHistory.length > 20) analysisHistory.pop();
+  renderHistory();
+}
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!analysisHistory.length) { list.innerHTML = '<div class="history-empty"><div class="h-icon">🕓</div><span>Aucune analyse</span></div>'; return; }
+  list.innerHTML = '';
+  analysisHistory.forEach(item => {
+    const color = item.score < 31 ? '#30d158' : item.score < 70 ? '#f97316' : '#ef4444';
+    const btn = document.createElement('button');
+    btn.className = 'history-item';
+    btn.innerHTML = miniRingSVG(item.score) + '<div class="h-info"><div class="h-name">' + item.productName + '</div><div class="h-time">' + item.time + '</div></div><div class="h-score" style="color:' + color + '">' + item.score + '%</div>';
+    btn.addEventListener('click', () => showResult(item.result));
+    list.appendChild(btn);
+  });
+}
 
-    const uid1 = `remind-${item.id}-2d@mwr`;
-    const uid2 = `remind-${item.id}-0d@mwr`;
-    const now = new Date();
-    const stamp = `${toIcsDate(now)}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}Z`;
+// ── Reset ──
+function reset() {
+  showPhase('idle');
+  document.getElementById('url-input').value = '';
+  clearImg(); hideErr(); switchTab('url');
+}
 
-    const priceTxt = fmtMoney(item.price);
+// ── Sidebar responsive ──
+function checkWidth() { document.getElementById('sidebar').classList.toggle('visible', window.innerWidth >= 860); }
+window.addEventListener('resize', checkWidth);
+checkWidth();
 
-    const ics = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//MWR//Suivi Abonnements//FR',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
+// ── Initialisation traduction (après toutes les définitions) ──
+applyTranslations();
 
-      // --- Rappel J-2 ---
-      'BEGIN:VEVENT',
-      `UID:${uid1}`,
-      `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${toIcsDate(remindDate)}`,
-      `DTEND;VALUE=DATE:${toIcsDate(remindDate)}`,
-      `SUMMARY:⏰ ${item.name} — paiement dans 2 jours`,
-      `DESCRIPTION:Ton abonnement ${item.name} (${priceTxt}) sera prélevé dans 2 jours.`,
-      'BEGIN:VALARM',
-      'TRIGGER:PT9H',
-      'ACTION:DISPLAY',
-      `DESCRIPTION:Rappel : ${item.name} dans 2 jours (${priceTxt})`,
-      'END:VALARM',
-      'END:VEVENT',
-
-      // --- Rappel J-0 (jour du paiement) ---
-      'BEGIN:VEVENT',
-      `UID:${uid2}`,
-      `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${toIcsDate(payDate)}`,
-      `DTEND;VALUE=DATE:${toIcsDate(payDate)}`,
-      `SUMMARY:💳 ${item.name} — paiement aujourd'hui`,
-      `DESCRIPTION:Ton abonnement ${item.name} (${priceTxt}) est prélevé aujourd'hui.`,
-      'BEGIN:VALARM',
-      'TRIGGER:PT9H',
-      'ACTION:DISPLAY',
-      `DESCRIPTION:Paiement aujourd'hui : ${item.name} (${priceTxt})`,
-      'END:VALARM',
-      'END:VEVENT',
-
-      'END:VCALENDAR'
-    ].join('\r\n');
-
-    const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rappel-${item.name.toLowerCase().replace(/\s+/g,'-')}.ics`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast(`🔔 Rappel créé pour ${item.name} !`);
-  }
-
-  function escapeHtml(s){
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-  }
-
-  buildQuickChips();
-  document.documentElement.lang = currentLang;
-  updateLangButton();
-  loadState(); // async, renders when ready
 </script>
 </body>
 </html>
